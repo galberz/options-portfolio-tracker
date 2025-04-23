@@ -1,0 +1,136 @@
+/* src/index.css */
+/* Cleared out default Vite styles - we are using App.css for now */
+
+/* Global settings */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light; /* Enforce light mode */
+  color: #213547; /* Default text color */
+  background-color: #ffffff; /* Default background color */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Basic body styling */
+body {
+  margin: 0;
+  display: flex;
+  place-items: center; /* Center content horizontally */
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f0f2f5; /* Slightly off-white background for the page */
+}
+
+/* Root container */
+#root {
+  width: 100%; /* Take full width */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center the App component */
+}
+
+/* Basic link styling */
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+/* Basic heading styling */
+h1 {
+  font-size: 2.5em; /* Larger heading */
+  line-height: 1.1;
+  color: #1a2b44; /* Darker heading color */
+  margin-bottom: 1rem;
+}
+ h2 {
+    font-size: 1.8em;
+    color: #33445f;
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid #e1e5ea;
+    padding-bottom: 0.3em;
+ }
+
+/* Basic button styling */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a; /* Default dark button */
+  cursor: pointer;
+  transition: border-color 0.25s;
+  color: #ffffff; /* Light text on dark button */
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Basic input/select styling */
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568; /* Label color */
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+    display: block;
+    width: calc(100% - 22px); /* Adjust width for padding/border */
+    padding: 0.6em 0.8em;
+    margin-bottom: 1rem;
+    border: 1px solid #cbd5e0; /* Input border */
+    border-radius: 6px;
+    font-size: 1em;
+    background-color: #ffffff; /* Input background */
+    color: #2d3748; /* Input text color */
+}
+input:focus, select:focus {
+    outline: none;
+    border-color: #646cff;
+    box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+}
+
+/* Utility class for form groups */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* Ensure light theme for buttons */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9; /* Lighter button background */
+    color: #213547; /* Darker button text */
+    border: 1px solid #ccc; /* Add border to light buttons */
+  }
+  button:hover {
+     border-color: #747bff;
+     background-color: #f0f0f0;
+  }
+}

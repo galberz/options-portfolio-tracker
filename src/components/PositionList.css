@@ -1,0 +1,77 @@
+/* src/components/PositionList.css */
+
+.position-list-container {
+  margin-top: 2rem;
+}
+
+.position-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.position-table thead {
+  background-color: #e9ecef; /* Light grey header */
+}
+
+.position-table th,
+.position-table td {
+  border: 1px solid #dee2e6; /* Light grey border */
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.position-table th {
+  font-weight: 600;
+  color: #495057; /* Darker grey header text */
+}
+
+.position-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa; /* Zebra striping */
+}
+
+.position-table tbody tr:hover {
+  background-color: #e9ecef; /* Highlight on hover */
+}
+
+.remove-btn {
+  padding: 0.2em 0.5em;
+  font-size: 0.8em;
+  line-height: 1;
+  background-color: #dc3545; /* Red */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.remove-btn:hover {
+  background-color: #c82333; /* Darker red */
+}
+
+/* Edit button styling */
+.edit-btn {
+  padding: 0.2em 0.5em;
+  font-size: 0.8em;
+  line-height: 1;
+  background-color: #ffc107; /* Yellow/Orange */
+  color: #212529; /* Dark text */
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.edit-btn:hover {
+  background-color: #e0a800; /* Darker yellow/orange */
+}
+
+/* Adjust the cell containing the buttons */
+.position-table td:last-child {
+  white-space: nowrap; /* Prevent buttons from wrapping */
+  width: 1%; /* Prevent the column from taking too much space */
+} 

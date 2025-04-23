@@ -1,0 +1,3086 @@
+// Code Snapshot Generated: 2025-04-23T21:09:35.797Z
+// Project Root: C:\Users\jread\Documents\Projects\Portfolio-tracker\options-portfolio-tracker
+// Included Directories: src, .
+// Included Extensions: .ts, .tsx, .js, .jsx, .css, .json
+// Included Specific Files: vite.config.ts, tsconfig.json, package.json, index.html
+// Excluded Directories: node_modules, dist, build, .git, .vscode, .idea, coverage, public
+// Excluded Files: code_snapshot.txt, create_snapshot.js, package-lock.json
+
+
+// ======= File: src\App.css =======
+
+/* src/App.css */
+
+body {
+  background-color: #f8f9fa; /* Lighter background for the whole page */
+  color: #212529; /* Darker text color for better contrast */
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  max-width: 1000px; /* Max width for content */
+  width: 90%; /* Responsive width */
+  margin: 2rem auto; /* Centering and top/bottom margin */
+  padding: 2rem;
+  background-color: #ffffff; /* White card background */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Softer shadow */
+  text-align: left; /* Align text left within the container */
+}
+
+h1, h2 {
+  color: #343a40; /* Slightly darker heading color */
+  margin-top: 0; /* Remove default top margin */
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.75rem;
+  font-weight: 500;
+}
+
+/* Style for the raw data display */
+pre {
+  background-color: #f8f9fa; /* Very light grey background */
+  border: 1px solid #e1e5ea; /* Light border */
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
+  white-space: pre-wrap; /* Wrap text */
+  word-wrap: break-word;
+  color: #4a5568; /* Text color inside the pre block */
+  font-size: 0.9em;
+  max-height: 300px; /* Limit height and enable vertical scroll */
+  overflow-y: auto;
+  margin-top: 1rem; /* Space above the pre block */
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  display: block;
+  width: calc(100% - 2px); /* Adjust width to account for padding/border */
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* Utility class for spacing */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.position-form {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.position-form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.position-form button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.position-form button:hover {
+  background-color: #0056b3;
+}
+
+.current-status {
+  background-color: #e9ecef; /* Light background */
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #dee2e6;
+}
+
+.current-status h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-bottom: none; /* Remove border if already present */
+  font-size: 1.5rem; /* Slightly smaller heading */
+}
+
+.current-status .form-group label {
+   margin-right: 0.5rem;
+   font-weight: bold;
+}
+
+.current-status span {
+    font-size: 1.1rem;
+}
+
+.forms-container {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    align-items: flex-start; /* Align forms to the top */
+}
+
+.forms-container > div {
+    flex: 1; /* Allow forms to grow */
+    min-width: 350px; /* Minimum width before wrapping */
+}
+
+/* Ensure forms inside container don't add extra margin */
+.forms-container .position-form {
+    margin-bottom: 0;
+}
+
+
+// ======= File: src\App.tsx =======
+
+import React, { useState, useMemo } from 'react';
+import { PositionList } from './components/PositionList';
+import { OptionForm } from './components/OptionForm';
+import { ShareForm } from './components/ShareForm';
+import { PLChart } from './components/PLChart';
+import { usePortfolio } from './contexts/PortfolioContext';
+import { calculatePortfolioPL } from './utils/calculations';
+import './App.css'; // You might want to remove default App.css styles later
+
+function App() {
+  const { portfolio } = usePortfolio();
+  const [currentPrice, setCurrentPrice] = useState<number | ''>('');
+
+  // Calculate P/L whenever portfolio or currentPrice changes
+  const currentPL = useMemo(() => {
+    if (currentPrice === '' || isNaN(Number(currentPrice))) {
+      return 0; // Or null/undefined to indicate no calculation
+    }
+    return calculatePortfolioPL(portfolio, Number(currentPrice));
+  }, [portfolio, currentPrice]);
+
+  // Basic price range calculation (can be refined later)
+  const priceRange = useMemo(() => {
+     let minStrike = Infinity;
+     let maxStrike = -Infinity; // Use -Infinity for max initial value
+     let shareCosts: number[] = [];
+
+     portfolio.options.forEach(opt => {
+       minStrike = Math.min(minStrike, opt.strikePrice);
+       maxStrike = Math.max(maxStrike, opt.strikePrice);
+     });
+     portfolio.shares.forEach(share => {
+        shareCosts.push(share.costBasisPerShare);
+     });
+
+     let low: number;
+     let high: number;
+     const hasOptions = portfolio.options.length > 0;
+     const hasShares = portfolio.shares.length > 0;
+
+     if (hasOptions) {
+         const rangePadding = (maxStrike - minStrike) * 0.4 || 30; // 40% padding or $30
+         low = minStrike - rangePadding;
+         high = maxStrike + rangePadding;
+         // Also consider share costs if they fall outside the strike range
+         shareCosts.forEach(cost => {
+             low = Math.min(low, cost * 0.8); // Include 80% of share cost
+             high = Math.max(high, cost * 1.2); // Include 120% of share cost
+         });
+
+     } else if (hasShares) {
+         const avgCost = shareCosts.reduce((sum, cost) => sum + cost, 0) / shareCosts.length;
+         const rangePadding = avgCost * 0.3 || 30; // 30% padding or $30
+         low = avgCost - rangePadding;
+         high = avgCost + rangePadding;
+     } else {
+         // Default if portfolio is empty
+         low = 0;
+         high = 100;
+     }
+
+     // Ensure range is reasonable (e.g., not negative, min width)
+     low = Math.max(0, low);
+     high = Math.max(low + 20, high); // Ensure at least $20 width
+
+     // Apply Rounding
+     const finalRange = {
+       low: Math.floor(low / 10) * 10, // Round down to nearest 10
+       high: Math.ceil(high / 10) * 10, // Round up to nearest 10
+     };
+
+     console.log('[App.tsx] Calculated Rounded Price Range:', finalRange);
+     return finalRange;
+  }, [portfolio]);
+
+  const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    // Allow empty string or valid numbers (including decimals)
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+       setCurrentPrice(value === '' ? '' : Number(value));
+    }
+  };
+
+  console.log('[App.tsx] Rendering with priceRange:', priceRange);
+  return (
+    <div className="app-container">
+      <h1>Options Portfolio Tracker</h1>
+      <p>Welcome! Let's track some options.</p>
+
+      {/* Current Price Input and P/L Display */}
+      <div className="current-status">
+        <h2>Current Status & P/L Curve</h2>
+        <div className="form-group">
+           <label htmlFor="current-price">Current Underlying Price:</label>
+           <input
+              id="current-price"
+              type="text" // Use text to allow empty string and better control
+              inputMode="decimal" // Hint for mobile keyboards
+              value={currentPrice}
+              onChange={handlePriceChange}
+              placeholder={`e.g., ${priceRange.low.toFixed(2)} - ${priceRange.high.toFixed(2)}`}
+              style={{ maxWidth: '200px', display: 'inline-block', marginRight: '10px' }} // Basic inline style
+           />
+           <span>
+             Current P/L:
+             <strong style={{ color: currentPL >= 0 ? 'green' : 'red', marginLeft: '5px' }}>
+               {currentPrice !== '' ? `$${currentPL.toFixed(2)}` : 'Enter price'}
+             </strong>
+           </span>
+        </div>
+        <PLChart
+          portfolio={portfolio}
+          currentPrice={currentPrice}
+          rangeStart={priceRange.low}
+          rangeEnd={priceRange.high}
+        />
+      </div>
+
+      {/* Add forms for entry */}
+      <div className="forms-container" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <div style={{ flex: 1, minWidth: '300px' }}>
+             <ShareForm />
+          </div>
+          <div style={{ flex: 1, minWidth: '300px' }}>
+             <OptionForm />
+          </div>
+      </div>
+
+      {/* Display the current positions */}
+      <PositionList />
+    </div>
+  );
+}
+
+export default App;
+
+
+// ======= File: src\components\OptionForm.tsx =======
+
+import React, { useState } from 'react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
+
+export const OptionForm: React.FC = () => {
+  const { addOption } = usePortfolio();
+  const [ticker, setTicker] = useState('');
+  const [quantity, setQuantity] = useState<number | ''>('');
+  const [strikePrice, setStrikePrice] = useState<number | ''>('');
+  const [premium, setPremium] = useState<number | ''>('');
+  const [expirationDate, setExpirationDate] = useState('');
+  const [tradeDate, setTradeDate] = useState('');
+  const [optionType, setOptionType] = useState<OptionType>('call');
+  const [positionType, setPositionType] = useState<PositionType>('short');
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!ticker || quantity === '' || strikePrice === '' || premium === '' || !expirationDate || !tradeDate) {
+      alert('Please fill in all option fields.');
+      return;
+    }
+
+    const newOption: Omit<OptionPosition, 'id'> = {
+      ticker: ticker.toUpperCase(),
+      quantity: Number(quantity),
+      strikePrice: Number(strikePrice),
+      premium: Number(premium),
+      expirationDate: expirationDate,
+      tradeDate: tradeDate,
+      optionType: optionType,
+      positionType: positionType,
+    };
+
+    addOption(newOption);
+
+    // Reset form
+    setTicker('');
+    setQuantity('');
+    setStrikePrice('');
+    setPremium('');
+    setExpirationDate('');
+    setTradeDate('');
+    setOptionType('call');
+    setPositionType('short');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="position-form">
+      <h3>Add Option Position</h3>
+      <div className="form-group">
+        <label htmlFor="option-ticker">Ticker:</label>
+        <input
+          id="option-ticker"
+          type="text"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          placeholder="e.g., MSFT"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-type">Type:</label>
+        <select
+          id="option-type"
+          value={optionType}
+          onChange={(e) => setOptionType(e.target.value as OptionType)}
+          required
+        >
+          <option value="call">Call</option>
+          <option value="put">Put</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-position-type">Position:</label>
+        <select
+          id="option-position-type"
+          value={positionType}
+          onChange={(e) => setPositionType(e.target.value as PositionType)}
+          required
+        >
+          <option value="short">Short (Sold)</option>
+          <option value="long">Long (Bought)</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-quantity">Quantity (Contracts):</label>
+        <input
+          id="option-quantity"
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="e.g., 1"
+          min="1"
+          step="1"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-strike">Strike Price ($):</label>
+        <input
+          id="option-strike"
+          type="number"
+          value={strikePrice}
+          onChange={(e) => setStrikePrice(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="e.g., 300"
+          min="0"
+          step="0.01"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-premium">Premium per Contract ($):</label>
+        <input
+          id="option-premium"
+          type="number"
+          value={premium}
+          onChange={(e) => setPremium(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder={positionType === 'short' ? "Premium Received" : "Premium Paid"}
+          min="0"
+          step="0.01"
+          required
+        />
+        <small>{positionType === 'short' ? 'Enter the total premium received per contract.' : 'Enter the total premium paid per contract.'}</small>
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-trade-date">Trade Date:</label>
+        <input
+          id="option-trade-date"
+          type="date"
+          value={tradeDate}
+          onChange={(e) => setTradeDate(e.target.value)}
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-expiration">Expiration Date:</label>
+        <input
+          id="option-expiration"
+          type="date"
+          value={expirationDate}
+          onChange={(e) => setExpirationDate(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit">Add Option</button>
+    </form>
+  );
+}; 
+
+// ======= File: src\components\PLChart.tsx =======
+
+import React from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine // To mark current price
+} from 'recharts';
+import { Portfolio } from '../types/portfolio';
+import { generatePLData } from '../utils/calculations';
+
+interface PLChartProps {
+  portfolio: Portfolio;
+  currentPrice: number | ''; // To show a marker on the chart
+  rangeStart: number;
+  rangeEnd: number;
+  steps?: number; // Optional number of steps for data generation
+}
+
+export const PLChart: React.FC<PLChartProps> = ({
+  portfolio,
+  currentPrice,
+  rangeStart,
+  rangeEnd,
+  steps = 100 // Increase steps for smoother curve
+}) => {
+  // Optional: Keep logs for now if you want to see data generation
+  console.log('[PLChart.tsx] Rendering Recharts component...');
+
+  // Generate the data points for the chart
+  const chartData = React.useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Recharts data with range: ${rangeStart} to ${rangeEnd}`);
+    if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
+        console.warn("[PLChart.tsx] Invalid range detected:", rangeStart, rangeEnd);
+        return [];
+    }
+    const data = generatePLData(portfolio, rangeStart, rangeEnd, steps);
+    console.log('[PLChart.tsx] Generated Recharts data:', data);
+    return data;
+  }, [portfolio, rangeStart, rangeEnd, steps]);
+
+  console.log('[PLChart.tsx] Recharts data length:', chartData.length);
+
+  if (chartData.length === 0) {
+    console.log('[PLChart.tsx] Rendering "Not enough data" message.');
+    return <p style={{ textAlign: 'center', margin: '20px' }}>Not enough data to display P/L chart.</p>;
+  }
+
+  // Format currency for tooltip/axis
+  const formatCurrency = (value: number) => `$${value.toFixed(0)}`; // Simple formatting
+
+  // --- ADD LOG FOR REFERENCE LINE CONDITIONS ---
+  console.log('[PLChart.tsx] Checking ReferenceLine conditions:', {
+    currentPrice: currentPrice,
+    type: typeof currentPrice,
+    isNumber: typeof currentPrice === 'number',
+    isNotEmpty: currentPrice !== '',
+    isWithinRange: typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd,
+    rangeStart: rangeStart,
+    rangeEnd: rangeEnd
+  });
+  // --- END LOG ---
+
+  console.log('[PLChart.tsx] Rendering the Recharts chart component.');
+  return (
+    <div style={{ width: '100%', height: 400 }}> {/* Define chart container size */}
+      <ResponsiveContainer>
+        <LineChart
+          data={chartData}
+          margin={{
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 10,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
+          <XAxis
+             dataKey="price"
+             type="number"
+             domain={[rangeStart, rangeEnd]}
+             label={{ value: "Underlying Price ($)", position: "insideBottom", dy: 10, fill: '#666' }}
+             tickFormatter={(value) => `$${value}`}
+             stroke="#666"
+           />
+          <YAxis
+            tickFormatter={formatCurrency}
+            label={{ value: "Profit / Loss ($)", angle: -90, position: "insideLeft", dx: -10, fill: '#666' }}
+            stroke="#666"
+          />
+          <Tooltip formatter={formatCurrency} labelFormatter={(label) => `Price: $${label.toFixed(2)}`} />
+          <Legend verticalAlign="top" height={36}/>
+
+          {/* Line representing P/L */}
+          <Line
+             type="monotone"
+             dataKey="pl"
+             name="Portfolio P/L"
+             stroke="#8884d8" // Purple line for P/L
+             strokeWidth={2}
+             dot={false} // Hide dots for smoother line
+           />
+
+           {/* Zero P/L line (breakeven) */}
+           <ReferenceLine y={0} stroke="#a8a8a8" strokeDasharray="4 4" label={{ value: 'Breakeven', position: 'insideTopRight', fill: '#888' }} />
+
+           {/* Line marking the current price */}
+           {currentPrice !== '' && typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd && (
+             <ReferenceLine
+                x={currentPrice}
+                stroke="green"
+                strokeWidth={2}
+                label={{ value: `Current: $${currentPrice.toFixed(2)}`, position: 'insideTopLeft', fill: 'green' }}
+              />
+           )}
+
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}; 
+
+// ======= File: src\components\PositionList.css =======
+
+/* src/components/PositionList.css */
+
+.position-list-container {
+  margin-top: 2rem;
+}
+
+.position-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.position-table thead {
+  background-color: #e9ecef; /* Light grey header */
+}
+
+.position-table th,
+.position-table td {
+  border: 1px solid #dee2e6; /* Light grey border */
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.position-table th {
+  font-weight: 600;
+  color: #495057; /* Darker grey header text */
+}
+
+.position-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa; /* Zebra striping */
+}
+
+.position-table tbody tr:hover {
+  background-color: #e9ecef; /* Highlight on hover */
+}
+
+.remove-btn {
+  padding: 0.2em 0.5em;
+  font-size: 0.8em;
+  line-height: 1;
+  background-color: #dc3545; /* Red */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.remove-btn:hover {
+  background-color: #c82333; /* Darker red */
+} 
+
+// ======= File: src\components\PositionList.tsx =======
+
+import React from 'react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { SharePosition, OptionPosition } from '../types/portfolio';
+import './PositionList.css'; // We'll create this CSS file next
+
+// Sub-component to display a single share row
+const ShareRow: React.FC<{ share: SharePosition, onRemove: (id: string) => void }> = ({ share, onRemove }) => (
+  <tr>
+    <td>{share.ticker.toUpperCase()}</td>
+    <td>{share.quantity}</td>
+    <td>${share.costBasisPerShare.toFixed(2)}</td>
+    <td>{share.purchaseDate}</td>
+    <td><button onClick={() => onRemove(share.id)} className="remove-btn">X</button></td>
+  </tr>
+);
+
+// Sub-component to display a single option row
+const OptionRow: React.FC<{ option: OptionPosition, onRemove: (id: string) => void }> = ({ option, onRemove }) => (
+  <tr>
+    <td>{option.ticker.toUpperCase()}</td>
+    <td>{option.quantity}</td>
+    <td>{option.optionType.toUpperCase()}</td>
+    <td>{option.positionType.toUpperCase()}</td>
+    <td>${option.strikePrice.toFixed(2)}</td>
+    <td>${option.premium.toFixed(2)}</td>
+    <td>{option.tradeDate}</td>
+    <td>{option.expirationDate}</td>
+    <td><button onClick={() => onRemove(option.id)} className="remove-btn">X</button></td>
+  </tr>
+);
+
+// Main component to display both lists
+export const PositionList: React.FC = () => {
+  const { portfolio, removeShare, removeOption } = usePortfolio();
+
+  return (
+    <div className="position-list-container">
+      <h2>Share Positions</h2>
+      {portfolio.shares.length > 0 ? (
+        <table className="position-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Quantity</th>
+              <th>Cost/Share</th>
+              <th>Purchase Date</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {portfolio.shares.map((share) => (
+              <ShareRow key={share.id} share={share} onRemove={removeShare} />
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>No share positions entered yet.</p>
+      )}
+
+      <h2>Option Positions</h2>
+      {portfolio.options.length > 0 ? (
+        <table className="position-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Contracts</th>
+              <th>Type</th>
+              <th>Position</th>
+              <th>Strike</th>
+              <th>Premium</th>
+              <th>Trade Date</th>
+              <th>Expiration</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {portfolio.options.map((option) => (
+              <OptionRow key={option.id} option={option} onRemove={removeOption} />
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>No option positions entered yet.</p>
+      )}
+    </div>
+  );
+}; 
+
+// ======= File: src\components\ShareForm.tsx =======
+
+import React, { useState } from 'react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { SharePosition } from '../types/portfolio';
+
+export const ShareForm: React.FC = () => {
+  const { addShare } = usePortfolio();
+  const [ticker, setTicker] = useState('');
+  const [quantity, setQuantity] = useState<number | ''>('');
+  const [costBasisPerShare, setCostBasisPerShare] = useState<number | ''>('');
+  const [purchaseDate, setPurchaseDate] = useState('');
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!ticker || quantity === '' || costBasisPerShare === '' || !purchaseDate) {
+      alert('Please fill in all share fields.');
+      return;
+    }
+
+    const newShare: Omit<SharePosition, 'id'> = {
+      ticker: ticker.toUpperCase(),
+      quantity: Number(quantity),
+      costBasisPerShare: Number(costBasisPerShare),
+      purchaseDate: purchaseDate,
+    };
+
+    addShare(newShare);
+
+    // Reset form
+    setTicker('');
+    setQuantity('');
+    setCostBasisPerShare('');
+    setPurchaseDate('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="position-form">
+      <h3>Add Share Position</h3>
+      <div className="form-group">
+        <label htmlFor="share-ticker">Ticker:</label>
+        <input
+          id="share-ticker"
+          type="text"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          placeholder="Enter ticker symbol"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="share-quantity">Quantity:</label>
+        <input
+          id="share-quantity"
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="Enter quantity"
+          min="1"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="share-cost-basis">Cost Basis per Share:</label>
+        <input
+          id="share-cost-basis"
+          type="number"
+          value={costBasisPerShare}
+          onChange={(e) => setCostBasisPerShare(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="Enter cost basis per share"
+          min="0"
+          step="0.01"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="share-purchase-date">Purchase Date:</label>
+        <input
+          id="share-purchase-date"
+          type="date"
+          value={purchaseDate}
+          onChange={(e) => setPurchaseDate(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit" className="submit-button">
+        Add Share Position
+      </button>
+    </form>
+  );
+}; 
+
+// ======= File: src\contexts\PortfolioContext.tsx =======
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react';
+import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
+
+// Define the shape of the context value
+interface PortfolioContextType {
+  portfolio: Portfolio;
+  addShare: (share: Omit<SharePosition, 'id'>) => void;
+  addOption: (option: Omit<OptionPosition, 'id'>) => void;
+  removeShare: (id: string) => void;
+  removeOption: (id: string) => void;
+  // We can add update functions later
+  loadPortfolio: (loadedPortfolio: Portfolio) => void; // Function to load data (e.g., from file)
+}
+
+// Create the context with an undefined initial value
+const PortfolioContext = createContext<PortfolioContextType | undefined>(
+  undefined
+);
+
+// Define the props for the provider component
+interface PortfolioProviderProps {
+  children: ReactNode;
+}
+
+// Initial empty state for the portfolio
+const initialPortfolio: Portfolio = {
+  shares: [],
+  options: [],
+};
+
+// Key for local storage
+const LOCAL_STORAGE_KEY = 'optionsPortfolio';
+
+// Create the provider component
+export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
+  children,
+}) => {
+  const [portfolio, setPortfolio] = useState<Portfolio>(() => {
+    // Load initial state from local storage if available
+    try {
+      const savedPortfolio = localStorage.getItem(LOCAL_STORAGE_KEY);
+      return savedPortfolio ? JSON.parse(savedPortfolio) : initialPortfolio;
+    } catch (error) {
+      console.error('Error loading portfolio from local storage:', error);
+      return initialPortfolio;
+    }
+  });
+
+  // Save portfolio to local storage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(portfolio));
+    } catch (error) {
+      console.error('Error saving portfolio to local storage:', error);
+    }
+  }, [portfolio]);
+
+  // Function to add a share position (generates a unique ID)
+  const addShare = useCallback((shareData: Omit<SharePosition, 'id'>) => {
+    const newShare: SharePosition = {
+      ...shareData,
+      id: `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    };
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: [...prev.shares, newShare],
+    }));
+  }, []);
+
+  // Function to add an option position (generates a unique ID)
+  const addOption = useCallback((optionData: Omit<OptionPosition, 'id'>) => {
+    const newOption: OptionPosition = {
+      ...optionData,
+      id: `option_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    };
+    setPortfolio((prev) => ({
+      ...prev,
+      options: [...prev.options, newOption],
+    }));
+  }, []);
+
+   // Function to remove a share position by ID
+   const removeShare = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.filter((share) => share.id !== id),
+    }));
+  }, []);
+
+  // Function to remove an option position by ID
+  const removeOption = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.filter((option) => option.id !== id),
+    }));
+  }, []);
+
+
+  // Function to load a complete portfolio (e.g., from an imported file)
+  const loadPortfolio = useCallback((loadedPortfolio: Portfolio) => {
+    // Basic validation could be added here
+    setPortfolio(loadedPortfolio);
+  }, []);
+
+  // Value provided by the context
+  const contextValue: PortfolioContextType = {
+    portfolio,
+    addShare,
+    addOption,
+    removeShare,
+    removeOption,
+    loadPortfolio,
+  };
+
+  return (
+    <PortfolioContext.Provider value={contextValue}>
+      {children}
+    </PortfolioContext.Provider>
+  );
+};
+
+// Custom hook to use the Portfolio context
+export const usePortfolio = (): PortfolioContextType => {
+  const context = useContext(PortfolioContext);
+  if (context === undefined) {
+    throw new Error('usePortfolio must be used within a PortfolioProvider');
+  }
+  return context;
+}; 
+
+// ======= File: src\index.css =======
+
+/* src/index.css */
+/* Cleared out default Vite styles - we are using App.css for now */
+
+/* Global settings */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light; /* Enforce light mode */
+  color: #213547; /* Default text color */
+  background-color: #ffffff; /* Default background color */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Basic body styling */
+body {
+  margin: 0;
+  display: flex;
+  place-items: center; /* Center content horizontally */
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f0f2f5; /* Slightly off-white background for the page */
+}
+
+/* Root container */
+#root {
+  width: 100%; /* Take full width */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center the App component */
+}
+
+/* Basic link styling */
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+/* Basic heading styling */
+h1 {
+  font-size: 2.5em; /* Larger heading */
+  line-height: 1.1;
+  color: #1a2b44; /* Darker heading color */
+  margin-bottom: 1rem;
+}
+ h2 {
+    font-size: 1.8em;
+    color: #33445f;
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid #e1e5ea;
+    padding-bottom: 0.3em;
+ }
+
+/* Basic button styling */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a; /* Default dark button */
+  cursor: pointer;
+  transition: border-color 0.25s;
+  color: #ffffff; /* Light text on dark button */
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Basic input/select styling */
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568; /* Label color */
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+    display: block;
+    width: calc(100% - 22px); /* Adjust width for padding/border */
+    padding: 0.6em 0.8em;
+    margin-bottom: 1rem;
+    border: 1px solid #cbd5e0; /* Input border */
+    border-radius: 6px;
+    font-size: 1em;
+    background-color: #ffffff; /* Input background */
+    color: #2d3748; /* Input text color */
+}
+input:focus, select:focus {
+    outline: none;
+    border-color: #646cff;
+    box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+}
+
+/* Utility class for form groups */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* Ensure light theme for buttons */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9; /* Lighter button background */
+    color: #213547; /* Darker button text */
+    border: 1px solid #ccc; /* Add border to light buttons */
+  }
+  button:hover {
+     border-color: #747bff;
+     background-color: #f0f0f0;
+  }
+}
+
+
+// ======= File: src\main.tsx =======
+
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+import { PortfolioProvider } from './contexts/PortfolioContext.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <PortfolioProvider>
+      <App />
+    </PortfolioProvider>
+  </StrictMode>,
+)
+
+
+// ======= File: src\types\js-quantities.d.ts =======
+
+declare module 'js-quantities' {
+    class Qty {
+        constructor(value: number, unit?: string);
+        static BlackScholes(
+            type: 'call' | 'put',
+            spot: number,
+            strike: number,
+            expiry: number,
+            rate: number,
+            vol: number
+        ): Qty;
+        scalar: number;
+    }
+    export default Qty;
+}
+
+declare module 'js-quantities/esm/extras/finance' {
+    // This module is imported for its side effects (adding finance-related functionality to Qty)
+    // No exports are needed
+} 
+
+// ======= File: src\types\portfolio.ts =======
+
+// src/types/portfolio.ts
+
+export type OptionType = 'call' | 'put';
+export type PositionType = 'long' | 'short'; // long = bought, short = sold/written
+
+// Base interface for common fields
+interface BasePosition {
+  id: string; // Unique identifier for each position entry
+  ticker: string; // Underlying stock symbol (e.g., 'AAPL')
+  quantity: number; // Number of shares or contracts
+}
+
+// Interface for holding shares
+export interface SharePosition extends BasePosition {
+  costBasisPerShare: number; // Price paid per share
+  purchaseDate: string; // Date purchased (ISO 8601 format: "YYYY-MM-DD")
+}
+
+// Interface for holding options
+export interface OptionPosition extends BasePosition {
+  optionType: OptionType;
+  positionType: PositionType;
+  strikePrice: number;
+  premium: number; // Premium received (for short) or paid (for long) per contract
+  expirationDate: string; // Expiration date (ISO 8601 format: "YYYY-MM-DD")
+  tradeDate: string; // Date the option was bought/sold (ISO 8601 format: "YYYY-MM-DD")
+  // Note: 'quantity' represents the number of contracts (each typically controls 100 shares)
+}
+
+// Interface for the entire portfolio
+export interface Portfolio {
+  shares: SharePosition[];
+  options: OptionPosition[];
+  // We can add more portfolio-level properties later (e.g., name, description)
+}
+
+// Type for potential assignment events (we'll detail this later)
+export interface AssignmentEvent {
+  id: string;
+  date: string; // Date of assignment
+  optionId: string; // ID of the option that was assigned
+  // Details about the resulting share transaction
+} 
+
+// ======= File: src\utils\calculations.ts =======
+
+// src/utils/calculations.ts
+
+import { Portfolio, SharePosition, OptionPosition, OptionType } from '../types/portfolio';
+// Import the main constructor only
+import Qty from 'js-quantities';
+
+// --- Constants and Defaults ---
+const DEFAULT_IMPLIED_VOLATILITY = 0.30; // 30% default IV
+const DEFAULT_RISK_FREE_RATE = 0.04;   // 4% default risk-free rate
+const DAYS_IN_YEAR = 365.25;
+
+/**
+ * Calculates the time to expiration in years (required by js-quantities BS).
+ * @param expirationDateStr - The expiration date string (YYYY-MM-DD).
+ * @param currentDate - The current date (defaults to now).
+ * @returns Time to expiration in years (fractional). Returns 0 if expired or invalid.
+ */
+function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date = new Date()): number {
+    try {
+        const expiryDate = new Date(expirationDateStr + 'T00:00:00Z');
+        const today = new Date(currentDate.toISOString().split('T')[0] + 'T00:00:00Z');
+
+        if (isNaN(expiryDate.getTime())) {
+            console.error("Invalid expiration date format:", expirationDateStr);
+            return 0;
+        }
+        const timeDiff = expiryDate.getTime() - today.getTime();
+        if (timeDiff <= 0) {
+            return 0;
+        }
+        const daysToExpiry = timeDiff / (1000 * 60 * 60 * 24);
+        return daysToExpiry / DAYS_IN_YEAR;
+    } catch (error) {
+        console.error("Error parsing date:", expirationDateStr, error);
+        return 0;
+    }
+}
+
+/**
+ * Calculates the current value of a single share position.
+ * @param share - The share position object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @returns The total value of the shares.
+ */
+export function calculateShareValue(share: SharePosition, underlyingPrice: number): number {
+  if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+  return share.quantity * underlyingPrice;
+}
+
+/**
+ * Calculates the theoretical value of a single option position using js-quantities Black-Scholes.
+ * @param option - The option position object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @param currentDate - The date for which to calculate the value (defaults to now).
+ * @param impliedVolatility - The implied volatility (decimal, e.g., 0.3 for 30%).
+ * @param riskFreeRate - The risk-free interest rate (decimal, e.g., 0.04 for 4%).
+ * @returns The theoretical value of the option position (can be negative for short positions).
+ */
+export function calculateOptionTheoreticalValue(
+    option: OptionPosition,
+    underlyingPrice: number,
+    currentDate: Date = new Date(),
+    impliedVolatility: number = DEFAULT_IMPLIED_VOLATILITY,
+    riskFreeRate: number = DEFAULT_RISK_FREE_RATE
+): number {
+    if (isNaN(underlyingPrice) || underlyingPrice <= 0 || isNaN(impliedVolatility) || impliedVolatility < 0 || isNaN(riskFreeRate)) {
+        console.warn("Invalid input for option pricing:", { underlyingPrice, impliedVolatility, riskFreeRate });
+        return 0;
+    }
+
+    const { strikePrice, expirationDate, optionType, positionType, quantity } = option;
+    const timeToExpirationYears = getTimeToExpirationInYears(expirationDate, currentDate);
+
+    if (timeToExpirationYears <= 0) {
+        let intrinsicValue = 0;
+        if (optionType === 'call') {
+            intrinsicValue = Math.max(0, underlyingPrice - strikePrice);
+        } else { // put
+            intrinsicValue = Math.max(0, strikePrice - underlyingPrice);
+        }
+        const totalIntrinsicValue = intrinsicValue * quantity * 100;
+        return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
+    }
+
+    try {
+        // Use the js-quantities Black-Scholes function
+        // Qty.BlackScholes(type, spot, strike, expiry, rate, vol)
+        // Note: expiry is in years
+        const theoreticalValuePerShare = Qty.BlackScholes(
+            optionType,         // 'call' or 'put'
+            underlyingPrice,    // spot
+            strikePrice,        // strike
+            timeToExpirationYears, // expiry (in years)
+            riskFreeRate,       // rate
+            impliedVolatility   // vol
+        );
+
+        // js-quantities returns a Qty object, we need the scalar value
+        const valueScalar = theoreticalValuePerShare.scalar;
+
+        if (isNaN(valueScalar) || typeof valueScalar !== 'number') {
+             console.warn("js-quantities returned invalid value for option:", option, { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", valueScalar);
+             return 0;
+        }
+
+        const totalValue = valueScalar * quantity * 100; // x100 shares per contract
+
+        return positionType === 'long' ? totalValue : -totalValue;
+
+    } catch (error) {
+        console.error("Error in js-quantities BS calculation for option:", option, error);
+        // Add more details about the inputs if possible
+        console.error("Inputs:", {optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility});
+        return 0;
+    }
+}
+
+/**
+ * Calculates the total cost basis of the portfolio.
+ * Long options cost money (positive cost), short options generate premium (negative cost).
+ * @param portfolio - The portfolio object.
+ * @returns The total cost basis.
+ */
+export function calculateTotalCostBasis(portfolio: Portfolio): number {
+  let totalCost = 0;
+
+  // Add cost of shares
+  portfolio.shares.forEach(share => {
+    totalCost += share.quantity * share.costBasisPerShare;
+  });
+
+  // Add/Subtract cost/premium of options
+  portfolio.options.forEach(option => {
+    const premiumEffect = option.premium * option.quantity * 100; // x100 shares per contract
+    if (option.positionType === 'long') {
+      totalCost += premiumEffect; // Paid premium increases cost basis
+    } else { // short
+      totalCost -= premiumEffect; // Received premium decreases cost basis
+    }
+  });
+
+  return totalCost;
+}
+
+/**
+ * Calculates the current *theoretical* total value of the entire portfolio.
+ * Uses js-quantities library for options.
+ * @param portfolio - The portfolio object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @param currentDate - The date for valuation (defaults to now).
+ * @param iv - Default Implied Volatility for options (decimal).
+ * @param rate - Default Risk-Free Rate for options (decimal).
+ * @returns The total theoretical value of the portfolio.
+ */
+export function calculatePortfolioTheoreticalValue(
+    portfolio: Portfolio,
+    underlyingPrice: number,
+    currentDate: Date = new Date(),
+    iv: number = DEFAULT_IMPLIED_VOLATILITY,
+    rate: number = DEFAULT_RISK_FREE_RATE
+): number {
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+
+    let totalValue = 0;
+
+    portfolio.shares.forEach(share => {
+        totalValue += calculateShareValue(share, underlyingPrice);
+    });
+
+    portfolio.options.forEach(option => {
+        // Pass IV and Rate to the option calculation
+        totalValue += calculateOptionTheoreticalValue(option, underlyingPrice, currentDate, iv, rate);
+    });
+
+    return totalValue;
+}
+
+/**
+ * Calculates the current *theoretical* Profit/Loss (P/L) of the portfolio.
+ * P/L = Current Theoretical Portfolio Value - Total Cost Basis
+ * @param portfolio - The portfolio object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @param currentDate - The date for valuation (defaults to now).
+ * @param iv - Default Implied Volatility for options (decimal).
+ * @param rate - Default Risk-Free Rate for options (decimal).
+ * @returns The total theoretical P/L.
+ */
+export function calculatePortfolioPL(
+    portfolio: Portfolio,
+    underlyingPrice: number,
+    currentDate: Date = new Date(),
+    iv: number = DEFAULT_IMPLIED_VOLATILITY,
+    rate: number = DEFAULT_RISK_FREE_RATE
+): number {
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+
+    // Use the theoretical value calculation now
+    const currentTotalValue = calculatePortfolioTheoreticalValue(portfolio, underlyingPrice, currentDate, iv, rate);
+    const totalCostBasis = calculateTotalCostBasis(portfolio);
+
+    return currentTotalValue - totalCostBasis;
+}
+
+/**
+ * Generates an array of {price, pl} points for creating a P/L graph.
+ * Uses the theoretical P/L calculation (js-quantities) for consistency.
+ *
+ * @param portfolio - The portfolio object.
+ * @param rangeStart - The starting underlying price for the range.
+ * @param rangeEnd - The ending underlying price for the range.
+ * @param steps - The number of price points to calculate within the range.
+ * @param currentDate - The date for valuation (defaults to now).
+ * @param iv - Default Implied Volatility for options (decimal).
+ * @param rate - Default Risk-Free Rate for options (decimal).
+ * @returns An array of objects { price: number, pl: number }.
+ */
+export function generatePLData(
+  portfolio: Portfolio,
+  rangeStart: number,
+  rangeEnd: number,
+  steps: number = 50,
+  currentDate: Date = new Date(),
+  iv: number = DEFAULT_IMPLIED_VOLATILITY,
+  rate: number = DEFAULT_RISK_FREE_RATE
+): { price: number, pl: number }[] {
+  const data: { price: number, pl: number }[] = [];
+  if (rangeStart >= rangeEnd || steps <= 0) return data;
+
+  const stepSize = (rangeEnd - rangeStart) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const price = rangeStart + (i * stepSize);
+    const pl = calculatePortfolioPL(portfolio, price, currentDate, iv, rate);
+    if (isNaN(pl)) {
+        console.warn(`generatePLData: NaN P/L calculated for price ${price}`);
+    } else {
+        data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
+    }
+  }
+  return data;
+} 
+
+// ======= File: src\vite-env.d.ts =======
+
+/// <reference types="vite/client" />
+
+
+// ======= File: eslint.config.js =======
+
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  },
+)
+
+
+// ======= File: index.html =======
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+
+// ======= File: package.json =======
+
+{
+  "name": "options-portfolio-tracker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "js-quantities": "^1.8.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.26.1",
+    "vite": "^6.3.1"
+  }
+}
+
+
+// ======= File: src\App.css =======
+
+/* src/App.css */
+
+body {
+  background-color: #f8f9fa; /* Lighter background for the whole page */
+  color: #212529; /* Darker text color for better contrast */
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  max-width: 1000px; /* Max width for content */
+  width: 90%; /* Responsive width */
+  margin: 2rem auto; /* Centering and top/bottom margin */
+  padding: 2rem;
+  background-color: #ffffff; /* White card background */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Softer shadow */
+  text-align: left; /* Align text left within the container */
+}
+
+h1, h2 {
+  color: #343a40; /* Slightly darker heading color */
+  margin-top: 0; /* Remove default top margin */
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.75rem;
+  font-weight: 500;
+}
+
+/* Style for the raw data display */
+pre {
+  background-color: #f8f9fa; /* Very light grey background */
+  border: 1px solid #e1e5ea; /* Light border */
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
+  white-space: pre-wrap; /* Wrap text */
+  word-wrap: break-word;
+  color: #4a5568; /* Text color inside the pre block */
+  font-size: 0.9em;
+  max-height: 300px; /* Limit height and enable vertical scroll */
+  overflow-y: auto;
+  margin-top: 1rem; /* Space above the pre block */
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  display: block;
+  width: calc(100% - 2px); /* Adjust width to account for padding/border */
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* Utility class for spacing */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.position-form {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.position-form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.position-form button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.position-form button:hover {
+  background-color: #0056b3;
+}
+
+.current-status {
+  background-color: #e9ecef; /* Light background */
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #dee2e6;
+}
+
+.current-status h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-bottom: none; /* Remove border if already present */
+  font-size: 1.5rem; /* Slightly smaller heading */
+}
+
+.current-status .form-group label {
+   margin-right: 0.5rem;
+   font-weight: bold;
+}
+
+.current-status span {
+    font-size: 1.1rem;
+}
+
+.forms-container {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    align-items: flex-start; /* Align forms to the top */
+}
+
+.forms-container > div {
+    flex: 1; /* Allow forms to grow */
+    min-width: 350px; /* Minimum width before wrapping */
+}
+
+/* Ensure forms inside container don't add extra margin */
+.forms-container .position-form {
+    margin-bottom: 0;
+}
+
+
+// ======= File: src\App.tsx =======
+
+import React, { useState, useMemo } from 'react';
+import { PositionList } from './components/PositionList';
+import { OptionForm } from './components/OptionForm';
+import { ShareForm } from './components/ShareForm';
+import { PLChart } from './components/PLChart';
+import { usePortfolio } from './contexts/PortfolioContext';
+import { calculatePortfolioPL } from './utils/calculations';
+import './App.css'; // You might want to remove default App.css styles later
+
+function App() {
+  const { portfolio } = usePortfolio();
+  const [currentPrice, setCurrentPrice] = useState<number | ''>('');
+
+  // Calculate P/L whenever portfolio or currentPrice changes
+  const currentPL = useMemo(() => {
+    if (currentPrice === '' || isNaN(Number(currentPrice))) {
+      return 0; // Or null/undefined to indicate no calculation
+    }
+    return calculatePortfolioPL(portfolio, Number(currentPrice));
+  }, [portfolio, currentPrice]);
+
+  // Basic price range calculation (can be refined later)
+  const priceRange = useMemo(() => {
+     let minStrike = Infinity;
+     let maxStrike = -Infinity; // Use -Infinity for max initial value
+     let shareCosts: number[] = [];
+
+     portfolio.options.forEach(opt => {
+       minStrike = Math.min(minStrike, opt.strikePrice);
+       maxStrike = Math.max(maxStrike, opt.strikePrice);
+     });
+     portfolio.shares.forEach(share => {
+        shareCosts.push(share.costBasisPerShare);
+     });
+
+     let low: number;
+     let high: number;
+     const hasOptions = portfolio.options.length > 0;
+     const hasShares = portfolio.shares.length > 0;
+
+     if (hasOptions) {
+         const rangePadding = (maxStrike - minStrike) * 0.4 || 30; // 40% padding or $30
+         low = minStrike - rangePadding;
+         high = maxStrike + rangePadding;
+         // Also consider share costs if they fall outside the strike range
+         shareCosts.forEach(cost => {
+             low = Math.min(low, cost * 0.8); // Include 80% of share cost
+             high = Math.max(high, cost * 1.2); // Include 120% of share cost
+         });
+
+     } else if (hasShares) {
+         const avgCost = shareCosts.reduce((sum, cost) => sum + cost, 0) / shareCosts.length;
+         const rangePadding = avgCost * 0.3 || 30; // 30% padding or $30
+         low = avgCost - rangePadding;
+         high = avgCost + rangePadding;
+     } else {
+         // Default if portfolio is empty
+         low = 0;
+         high = 100;
+     }
+
+     // Ensure range is reasonable (e.g., not negative, min width)
+     low = Math.max(0, low);
+     high = Math.max(low + 20, high); // Ensure at least $20 width
+
+     // Apply Rounding
+     const finalRange = {
+       low: Math.floor(low / 10) * 10, // Round down to nearest 10
+       high: Math.ceil(high / 10) * 10, // Round up to nearest 10
+     };
+
+     console.log('[App.tsx] Calculated Rounded Price Range:', finalRange);
+     return finalRange;
+  }, [portfolio]);
+
+  const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    // Allow empty string or valid numbers (including decimals)
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+       setCurrentPrice(value === '' ? '' : Number(value));
+    }
+  };
+
+  console.log('[App.tsx] Rendering with priceRange:', priceRange);
+  return (
+    <div className="app-container">
+      <h1>Options Portfolio Tracker</h1>
+      <p>Welcome! Let's track some options.</p>
+
+      {/* Current Price Input and P/L Display */}
+      <div className="current-status">
+        <h2>Current Status & P/L Curve</h2>
+        <div className="form-group">
+           <label htmlFor="current-price">Current Underlying Price:</label>
+           <input
+              id="current-price"
+              type="text" // Use text to allow empty string and better control
+              inputMode="decimal" // Hint for mobile keyboards
+              value={currentPrice}
+              onChange={handlePriceChange}
+              placeholder={`e.g., ${priceRange.low.toFixed(2)} - ${priceRange.high.toFixed(2)}`}
+              style={{ maxWidth: '200px', display: 'inline-block', marginRight: '10px' }} // Basic inline style
+           />
+           <span>
+             Current P/L:
+             <strong style={{ color: currentPL >= 0 ? 'green' : 'red', marginLeft: '5px' }}>
+               {currentPrice !== '' ? `$${currentPL.toFixed(2)}` : 'Enter price'}
+             </strong>
+           </span>
+        </div>
+        <PLChart
+          portfolio={portfolio}
+          currentPrice={currentPrice}
+          rangeStart={priceRange.low}
+          rangeEnd={priceRange.high}
+        />
+      </div>
+
+      {/* Add forms for entry */}
+      <div className="forms-container" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <div style={{ flex: 1, minWidth: '300px' }}>
+             <ShareForm />
+          </div>
+          <div style={{ flex: 1, minWidth: '300px' }}>
+             <OptionForm />
+          </div>
+      </div>
+
+      {/* Display the current positions */}
+      <PositionList />
+    </div>
+  );
+}
+
+export default App;
+
+
+// ======= File: src\components\OptionForm.tsx =======
+
+import React, { useState } from 'react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
+
+export const OptionForm: React.FC = () => {
+  const { addOption } = usePortfolio();
+  const [ticker, setTicker] = useState('');
+  const [quantity, setQuantity] = useState<number | ''>('');
+  const [strikePrice, setStrikePrice] = useState<number | ''>('');
+  const [premium, setPremium] = useState<number | ''>('');
+  const [expirationDate, setExpirationDate] = useState('');
+  const [tradeDate, setTradeDate] = useState('');
+  const [optionType, setOptionType] = useState<OptionType>('call');
+  const [positionType, setPositionType] = useState<PositionType>('short');
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!ticker || quantity === '' || strikePrice === '' || premium === '' || !expirationDate || !tradeDate) {
+      alert('Please fill in all option fields.');
+      return;
+    }
+
+    const newOption: Omit<OptionPosition, 'id'> = {
+      ticker: ticker.toUpperCase(),
+      quantity: Number(quantity),
+      strikePrice: Number(strikePrice),
+      premium: Number(premium),
+      expirationDate: expirationDate,
+      tradeDate: tradeDate,
+      optionType: optionType,
+      positionType: positionType,
+    };
+
+    addOption(newOption);
+
+    // Reset form
+    setTicker('');
+    setQuantity('');
+    setStrikePrice('');
+    setPremium('');
+    setExpirationDate('');
+    setTradeDate('');
+    setOptionType('call');
+    setPositionType('short');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="position-form">
+      <h3>Add Option Position</h3>
+      <div className="form-group">
+        <label htmlFor="option-ticker">Ticker:</label>
+        <input
+          id="option-ticker"
+          type="text"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          placeholder="e.g., MSFT"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-type">Type:</label>
+        <select
+          id="option-type"
+          value={optionType}
+          onChange={(e) => setOptionType(e.target.value as OptionType)}
+          required
+        >
+          <option value="call">Call</option>
+          <option value="put">Put</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-position-type">Position:</label>
+        <select
+          id="option-position-type"
+          value={positionType}
+          onChange={(e) => setPositionType(e.target.value as PositionType)}
+          required
+        >
+          <option value="short">Short (Sold)</option>
+          <option value="long">Long (Bought)</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-quantity">Quantity (Contracts):</label>
+        <input
+          id="option-quantity"
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="e.g., 1"
+          min="1"
+          step="1"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-strike">Strike Price ($):</label>
+        <input
+          id="option-strike"
+          type="number"
+          value={strikePrice}
+          onChange={(e) => setStrikePrice(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="e.g., 300"
+          min="0"
+          step="0.01"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-premium">Premium per Contract ($):</label>
+        <input
+          id="option-premium"
+          type="number"
+          value={premium}
+          onChange={(e) => setPremium(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder={positionType === 'short' ? "Premium Received" : "Premium Paid"}
+          min="0"
+          step="0.01"
+          required
+        />
+        <small>{positionType === 'short' ? 'Enter the total premium received per contract.' : 'Enter the total premium paid per contract.'}</small>
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-trade-date">Trade Date:</label>
+        <input
+          id="option-trade-date"
+          type="date"
+          value={tradeDate}
+          onChange={(e) => setTradeDate(e.target.value)}
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="option-expiration">Expiration Date:</label>
+        <input
+          id="option-expiration"
+          type="date"
+          value={expirationDate}
+          onChange={(e) => setExpirationDate(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit">Add Option</button>
+    </form>
+  );
+}; 
+
+// ======= File: src\components\PLChart.tsx =======
+
+import React from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine // To mark current price
+} from 'recharts';
+import { Portfolio } from '../types/portfolio';
+import { generatePLData } from '../utils/calculations';
+
+interface PLChartProps {
+  portfolio: Portfolio;
+  currentPrice: number | ''; // To show a marker on the chart
+  rangeStart: number;
+  rangeEnd: number;
+  steps?: number; // Optional number of steps for data generation
+}
+
+export const PLChart: React.FC<PLChartProps> = ({
+  portfolio,
+  currentPrice,
+  rangeStart,
+  rangeEnd,
+  steps = 100 // Increase steps for smoother curve
+}) => {
+  // Optional: Keep logs for now if you want to see data generation
+  console.log('[PLChart.tsx] Rendering Recharts component...');
+
+  // Generate the data points for the chart
+  const chartData = React.useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Recharts data with range: ${rangeStart} to ${rangeEnd}`);
+    if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
+        console.warn("[PLChart.tsx] Invalid range detected:", rangeStart, rangeEnd);
+        return [];
+    }
+    const data = generatePLData(portfolio, rangeStart, rangeEnd, steps);
+    console.log('[PLChart.tsx] Generated Recharts data:', data);
+    return data;
+  }, [portfolio, rangeStart, rangeEnd, steps]);
+
+  console.log('[PLChart.tsx] Recharts data length:', chartData.length);
+
+  if (chartData.length === 0) {
+    console.log('[PLChart.tsx] Rendering "Not enough data" message.');
+    return <p style={{ textAlign: 'center', margin: '20px' }}>Not enough data to display P/L chart.</p>;
+  }
+
+  // Format currency for tooltip/axis
+  const formatCurrency = (value: number) => `$${value.toFixed(0)}`; // Simple formatting
+
+  // --- ADD LOG FOR REFERENCE LINE CONDITIONS ---
+  console.log('[PLChart.tsx] Checking ReferenceLine conditions:', {
+    currentPrice: currentPrice,
+    type: typeof currentPrice,
+    isNumber: typeof currentPrice === 'number',
+    isNotEmpty: currentPrice !== '',
+    isWithinRange: typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd,
+    rangeStart: rangeStart,
+    rangeEnd: rangeEnd
+  });
+  // --- END LOG ---
+
+  console.log('[PLChart.tsx] Rendering the Recharts chart component.');
+  return (
+    <div style={{ width: '100%', height: 400 }}> {/* Define chart container size */}
+      <ResponsiveContainer>
+        <LineChart
+          data={chartData}
+          margin={{
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 10,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
+          <XAxis
+             dataKey="price"
+             type="number"
+             domain={[rangeStart, rangeEnd]}
+             label={{ value: "Underlying Price ($)", position: "insideBottom", dy: 10, fill: '#666' }}
+             tickFormatter={(value) => `$${value}`}
+             stroke="#666"
+           />
+          <YAxis
+            tickFormatter={formatCurrency}
+            label={{ value: "Profit / Loss ($)", angle: -90, position: "insideLeft", dx: -10, fill: '#666' }}
+            stroke="#666"
+          />
+          <Tooltip formatter={formatCurrency} labelFormatter={(label) => `Price: $${label.toFixed(2)}`} />
+          <Legend verticalAlign="top" height={36}/>
+
+          {/* Line representing P/L */}
+          <Line
+             type="monotone"
+             dataKey="pl"
+             name="Portfolio P/L"
+             stroke="#8884d8" // Purple line for P/L
+             strokeWidth={2}
+             dot={false} // Hide dots for smoother line
+           />
+
+           {/* Zero P/L line (breakeven) */}
+           <ReferenceLine y={0} stroke="#a8a8a8" strokeDasharray="4 4" label={{ value: 'Breakeven', position: 'insideTopRight', fill: '#888' }} />
+
+           {/* Line marking the current price */}
+           {currentPrice !== '' && typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd && (
+             <ReferenceLine
+                x={currentPrice}
+                stroke="green"
+                strokeWidth={2}
+                label={{ value: `Current: $${currentPrice.toFixed(2)}`, position: 'insideTopLeft', fill: 'green' }}
+              />
+           )}
+
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}; 
+
+// ======= File: src\components\PositionList.css =======
+
+/* src/components/PositionList.css */
+
+.position-list-container {
+  margin-top: 2rem;
+}
+
+.position-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.position-table thead {
+  background-color: #e9ecef; /* Light grey header */
+}
+
+.position-table th,
+.position-table td {
+  border: 1px solid #dee2e6; /* Light grey border */
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.position-table th {
+  font-weight: 600;
+  color: #495057; /* Darker grey header text */
+}
+
+.position-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa; /* Zebra striping */
+}
+
+.position-table tbody tr:hover {
+  background-color: #e9ecef; /* Highlight on hover */
+}
+
+.remove-btn {
+  padding: 0.2em 0.5em;
+  font-size: 0.8em;
+  line-height: 1;
+  background-color: #dc3545; /* Red */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.remove-btn:hover {
+  background-color: #c82333; /* Darker red */
+} 
+
+// ======= File: src\components\PositionList.tsx =======
+
+import React from 'react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { SharePosition, OptionPosition } from '../types/portfolio';
+import './PositionList.css'; // We'll create this CSS file next
+
+// Sub-component to display a single share row
+const ShareRow: React.FC<{ share: SharePosition, onRemove: (id: string) => void }> = ({ share, onRemove }) => (
+  <tr>
+    <td>{share.ticker.toUpperCase()}</td>
+    <td>{share.quantity}</td>
+    <td>${share.costBasisPerShare.toFixed(2)}</td>
+    <td>{share.purchaseDate}</td>
+    <td><button onClick={() => onRemove(share.id)} className="remove-btn">X</button></td>
+  </tr>
+);
+
+// Sub-component to display a single option row
+const OptionRow: React.FC<{ option: OptionPosition, onRemove: (id: string) => void }> = ({ option, onRemove }) => (
+  <tr>
+    <td>{option.ticker.toUpperCase()}</td>
+    <td>{option.quantity}</td>
+    <td>{option.optionType.toUpperCase()}</td>
+    <td>{option.positionType.toUpperCase()}</td>
+    <td>${option.strikePrice.toFixed(2)}</td>
+    <td>${option.premium.toFixed(2)}</td>
+    <td>{option.tradeDate}</td>
+    <td>{option.expirationDate}</td>
+    <td><button onClick={() => onRemove(option.id)} className="remove-btn">X</button></td>
+  </tr>
+);
+
+// Main component to display both lists
+export const PositionList: React.FC = () => {
+  const { portfolio, removeShare, removeOption } = usePortfolio();
+
+  return (
+    <div className="position-list-container">
+      <h2>Share Positions</h2>
+      {portfolio.shares.length > 0 ? (
+        <table className="position-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Quantity</th>
+              <th>Cost/Share</th>
+              <th>Purchase Date</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {portfolio.shares.map((share) => (
+              <ShareRow key={share.id} share={share} onRemove={removeShare} />
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>No share positions entered yet.</p>
+      )}
+
+      <h2>Option Positions</h2>
+      {portfolio.options.length > 0 ? (
+        <table className="position-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Contracts</th>
+              <th>Type</th>
+              <th>Position</th>
+              <th>Strike</th>
+              <th>Premium</th>
+              <th>Trade Date</th>
+              <th>Expiration</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {portfolio.options.map((option) => (
+              <OptionRow key={option.id} option={option} onRemove={removeOption} />
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>No option positions entered yet.</p>
+      )}
+    </div>
+  );
+}; 
+
+// ======= File: src\components\ShareForm.tsx =======
+
+import React, { useState } from 'react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { SharePosition } from '../types/portfolio';
+
+export const ShareForm: React.FC = () => {
+  const { addShare } = usePortfolio();
+  const [ticker, setTicker] = useState('');
+  const [quantity, setQuantity] = useState<number | ''>('');
+  const [costBasisPerShare, setCostBasisPerShare] = useState<number | ''>('');
+  const [purchaseDate, setPurchaseDate] = useState('');
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!ticker || quantity === '' || costBasisPerShare === '' || !purchaseDate) {
+      alert('Please fill in all share fields.');
+      return;
+    }
+
+    const newShare: Omit<SharePosition, 'id'> = {
+      ticker: ticker.toUpperCase(),
+      quantity: Number(quantity),
+      costBasisPerShare: Number(costBasisPerShare),
+      purchaseDate: purchaseDate,
+    };
+
+    addShare(newShare);
+
+    // Reset form
+    setTicker('');
+    setQuantity('');
+    setCostBasisPerShare('');
+    setPurchaseDate('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="position-form">
+      <h3>Add Share Position</h3>
+      <div className="form-group">
+        <label htmlFor="share-ticker">Ticker:</label>
+        <input
+          id="share-ticker"
+          type="text"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          placeholder="Enter ticker symbol"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="share-quantity">Quantity:</label>
+        <input
+          id="share-quantity"
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="Enter quantity"
+          min="1"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="share-cost-basis">Cost Basis per Share:</label>
+        <input
+          id="share-cost-basis"
+          type="number"
+          value={costBasisPerShare}
+          onChange={(e) => setCostBasisPerShare(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder="Enter cost basis per share"
+          min="0"
+          step="0.01"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="share-purchase-date">Purchase Date:</label>
+        <input
+          id="share-purchase-date"
+          type="date"
+          value={purchaseDate}
+          onChange={(e) => setPurchaseDate(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit" className="submit-button">
+        Add Share Position
+      </button>
+    </form>
+  );
+}; 
+
+// ======= File: src\contexts\PortfolioContext.tsx =======
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react';
+import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
+
+// Define the shape of the context value
+interface PortfolioContextType {
+  portfolio: Portfolio;
+  addShare: (share: Omit<SharePosition, 'id'>) => void;
+  addOption: (option: Omit<OptionPosition, 'id'>) => void;
+  removeShare: (id: string) => void;
+  removeOption: (id: string) => void;
+  // We can add update functions later
+  loadPortfolio: (loadedPortfolio: Portfolio) => void; // Function to load data (e.g., from file)
+}
+
+// Create the context with an undefined initial value
+const PortfolioContext = createContext<PortfolioContextType | undefined>(
+  undefined
+);
+
+// Define the props for the provider component
+interface PortfolioProviderProps {
+  children: ReactNode;
+}
+
+// Initial empty state for the portfolio
+const initialPortfolio: Portfolio = {
+  shares: [],
+  options: [],
+};
+
+// Key for local storage
+const LOCAL_STORAGE_KEY = 'optionsPortfolio';
+
+// Create the provider component
+export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
+  children,
+}) => {
+  const [portfolio, setPortfolio] = useState<Portfolio>(() => {
+    // Load initial state from local storage if available
+    try {
+      const savedPortfolio = localStorage.getItem(LOCAL_STORAGE_KEY);
+      return savedPortfolio ? JSON.parse(savedPortfolio) : initialPortfolio;
+    } catch (error) {
+      console.error('Error loading portfolio from local storage:', error);
+      return initialPortfolio;
+    }
+  });
+
+  // Save portfolio to local storage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(portfolio));
+    } catch (error) {
+      console.error('Error saving portfolio to local storage:', error);
+    }
+  }, [portfolio]);
+
+  // Function to add a share position (generates a unique ID)
+  const addShare = useCallback((shareData: Omit<SharePosition, 'id'>) => {
+    const newShare: SharePosition = {
+      ...shareData,
+      id: `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    };
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: [...prev.shares, newShare],
+    }));
+  }, []);
+
+  // Function to add an option position (generates a unique ID)
+  const addOption = useCallback((optionData: Omit<OptionPosition, 'id'>) => {
+    const newOption: OptionPosition = {
+      ...optionData,
+      id: `option_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    };
+    setPortfolio((prev) => ({
+      ...prev,
+      options: [...prev.options, newOption],
+    }));
+  }, []);
+
+   // Function to remove a share position by ID
+   const removeShare = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.filter((share) => share.id !== id),
+    }));
+  }, []);
+
+  // Function to remove an option position by ID
+  const removeOption = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.filter((option) => option.id !== id),
+    }));
+  }, []);
+
+
+  // Function to load a complete portfolio (e.g., from an imported file)
+  const loadPortfolio = useCallback((loadedPortfolio: Portfolio) => {
+    // Basic validation could be added here
+    setPortfolio(loadedPortfolio);
+  }, []);
+
+  // Value provided by the context
+  const contextValue: PortfolioContextType = {
+    portfolio,
+    addShare,
+    addOption,
+    removeShare,
+    removeOption,
+    loadPortfolio,
+  };
+
+  return (
+    <PortfolioContext.Provider value={contextValue}>
+      {children}
+    </PortfolioContext.Provider>
+  );
+};
+
+// Custom hook to use the Portfolio context
+export const usePortfolio = (): PortfolioContextType => {
+  const context = useContext(PortfolioContext);
+  if (context === undefined) {
+    throw new Error('usePortfolio must be used within a PortfolioProvider');
+  }
+  return context;
+}; 
+
+// ======= File: src\index.css =======
+
+/* src/index.css */
+/* Cleared out default Vite styles - we are using App.css for now */
+
+/* Global settings */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light; /* Enforce light mode */
+  color: #213547; /* Default text color */
+  background-color: #ffffff; /* Default background color */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Basic body styling */
+body {
+  margin: 0;
+  display: flex;
+  place-items: center; /* Center content horizontally */
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f0f2f5; /* Slightly off-white background for the page */
+}
+
+/* Root container */
+#root {
+  width: 100%; /* Take full width */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center the App component */
+}
+
+/* Basic link styling */
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+/* Basic heading styling */
+h1 {
+  font-size: 2.5em; /* Larger heading */
+  line-height: 1.1;
+  color: #1a2b44; /* Darker heading color */
+  margin-bottom: 1rem;
+}
+ h2 {
+    font-size: 1.8em;
+    color: #33445f;
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid #e1e5ea;
+    padding-bottom: 0.3em;
+ }
+
+/* Basic button styling */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a; /* Default dark button */
+  cursor: pointer;
+  transition: border-color 0.25s;
+  color: #ffffff; /* Light text on dark button */
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Basic input/select styling */
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568; /* Label color */
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+    display: block;
+    width: calc(100% - 22px); /* Adjust width for padding/border */
+    padding: 0.6em 0.8em;
+    margin-bottom: 1rem;
+    border: 1px solid #cbd5e0; /* Input border */
+    border-radius: 6px;
+    font-size: 1em;
+    background-color: #ffffff; /* Input background */
+    color: #2d3748; /* Input text color */
+}
+input:focus, select:focus {
+    outline: none;
+    border-color: #646cff;
+    box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+}
+
+/* Utility class for form groups */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* Ensure light theme for buttons */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9; /* Lighter button background */
+    color: #213547; /* Darker button text */
+    border: 1px solid #ccc; /* Add border to light buttons */
+  }
+  button:hover {
+     border-color: #747bff;
+     background-color: #f0f0f0;
+  }
+}
+
+
+// ======= File: src\main.tsx =======
+
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+import { PortfolioProvider } from './contexts/PortfolioContext.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <PortfolioProvider>
+      <App />
+    </PortfolioProvider>
+  </StrictMode>,
+)
+
+
+// ======= File: src\types\js-quantities.d.ts =======
+
+declare module 'js-quantities' {
+    class Qty {
+        constructor(value: number, unit?: string);
+        static BlackScholes(
+            type: 'call' | 'put',
+            spot: number,
+            strike: number,
+            expiry: number,
+            rate: number,
+            vol: number
+        ): Qty;
+        scalar: number;
+    }
+    export default Qty;
+}
+
+declare module 'js-quantities/esm/extras/finance' {
+    // This module is imported for its side effects (adding finance-related functionality to Qty)
+    // No exports are needed
+} 
+
+// ======= File: src\types\portfolio.ts =======
+
+// src/types/portfolio.ts
+
+export type OptionType = 'call' | 'put';
+export type PositionType = 'long' | 'short'; // long = bought, short = sold/written
+
+// Base interface for common fields
+interface BasePosition {
+  id: string; // Unique identifier for each position entry
+  ticker: string; // Underlying stock symbol (e.g., 'AAPL')
+  quantity: number; // Number of shares or contracts
+}
+
+// Interface for holding shares
+export interface SharePosition extends BasePosition {
+  costBasisPerShare: number; // Price paid per share
+  purchaseDate: string; // Date purchased (ISO 8601 format: "YYYY-MM-DD")
+}
+
+// Interface for holding options
+export interface OptionPosition extends BasePosition {
+  optionType: OptionType;
+  positionType: PositionType;
+  strikePrice: number;
+  premium: number; // Premium received (for short) or paid (for long) per contract
+  expirationDate: string; // Expiration date (ISO 8601 format: "YYYY-MM-DD")
+  tradeDate: string; // Date the option was bought/sold (ISO 8601 format: "YYYY-MM-DD")
+  // Note: 'quantity' represents the number of contracts (each typically controls 100 shares)
+}
+
+// Interface for the entire portfolio
+export interface Portfolio {
+  shares: SharePosition[];
+  options: OptionPosition[];
+  // We can add more portfolio-level properties later (e.g., name, description)
+}
+
+// Type for potential assignment events (we'll detail this later)
+export interface AssignmentEvent {
+  id: string;
+  date: string; // Date of assignment
+  optionId: string; // ID of the option that was assigned
+  // Details about the resulting share transaction
+} 
+
+// ======= File: src\utils\calculations.ts =======
+
+// src/utils/calculations.ts
+
+import { Portfolio, SharePosition, OptionPosition, OptionType } from '../types/portfolio';
+// Import the main constructor only
+import Qty from 'js-quantities';
+
+// --- Constants and Defaults ---
+const DEFAULT_IMPLIED_VOLATILITY = 0.30; // 30% default IV
+const DEFAULT_RISK_FREE_RATE = 0.04;   // 4% default risk-free rate
+const DAYS_IN_YEAR = 365.25;
+
+/**
+ * Calculates the time to expiration in years (required by js-quantities BS).
+ * @param expirationDateStr - The expiration date string (YYYY-MM-DD).
+ * @param currentDate - The current date (defaults to now).
+ * @returns Time to expiration in years (fractional). Returns 0 if expired or invalid.
+ */
+function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date = new Date()): number {
+    try {
+        const expiryDate = new Date(expirationDateStr + 'T00:00:00Z');
+        const today = new Date(currentDate.toISOString().split('T')[0] + 'T00:00:00Z');
+
+        if (isNaN(expiryDate.getTime())) {
+            console.error("Invalid expiration date format:", expirationDateStr);
+            return 0;
+        }
+        const timeDiff = expiryDate.getTime() - today.getTime();
+        if (timeDiff <= 0) {
+            return 0;
+        }
+        const daysToExpiry = timeDiff / (1000 * 60 * 60 * 24);
+        return daysToExpiry / DAYS_IN_YEAR;
+    } catch (error) {
+        console.error("Error parsing date:", expirationDateStr, error);
+        return 0;
+    }
+}
+
+/**
+ * Calculates the current value of a single share position.
+ * @param share - The share position object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @returns The total value of the shares.
+ */
+export function calculateShareValue(share: SharePosition, underlyingPrice: number): number {
+  if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+  return share.quantity * underlyingPrice;
+}
+
+/**
+ * Calculates the theoretical value of a single option position using js-quantities Black-Scholes.
+ * @param option - The option position object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @param currentDate - The date for which to calculate the value (defaults to now).
+ * @param impliedVolatility - The implied volatility (decimal, e.g., 0.3 for 30%).
+ * @param riskFreeRate - The risk-free interest rate (decimal, e.g., 0.04 for 4%).
+ * @returns The theoretical value of the option position (can be negative for short positions).
+ */
+export function calculateOptionTheoreticalValue(
+    option: OptionPosition,
+    underlyingPrice: number,
+    currentDate: Date = new Date(),
+    impliedVolatility: number = DEFAULT_IMPLIED_VOLATILITY,
+    riskFreeRate: number = DEFAULT_RISK_FREE_RATE
+): number {
+    if (isNaN(underlyingPrice) || underlyingPrice <= 0 || isNaN(impliedVolatility) || impliedVolatility < 0 || isNaN(riskFreeRate)) {
+        console.warn("Invalid input for option pricing:", { underlyingPrice, impliedVolatility, riskFreeRate });
+        return 0;
+    }
+
+    const { strikePrice, expirationDate, optionType, positionType, quantity } = option;
+    const timeToExpirationYears = getTimeToExpirationInYears(expirationDate, currentDate);
+
+    if (timeToExpirationYears <= 0) {
+        let intrinsicValue = 0;
+        if (optionType === 'call') {
+            intrinsicValue = Math.max(0, underlyingPrice - strikePrice);
+        } else { // put
+            intrinsicValue = Math.max(0, strikePrice - underlyingPrice);
+        }
+        const totalIntrinsicValue = intrinsicValue * quantity * 100;
+        return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
+    }
+
+    try {
+        // Use the js-quantities Black-Scholes function
+        // Qty.BlackScholes(type, spot, strike, expiry, rate, vol)
+        // Note: expiry is in years
+        const theoreticalValuePerShare = Qty.BlackScholes(
+            optionType,         // 'call' or 'put'
+            underlyingPrice,    // spot
+            strikePrice,        // strike
+            timeToExpirationYears, // expiry (in years)
+            riskFreeRate,       // rate
+            impliedVolatility   // vol
+        );
+
+        // js-quantities returns a Qty object, we need the scalar value
+        const valueScalar = theoreticalValuePerShare.scalar;
+
+        if (isNaN(valueScalar) || typeof valueScalar !== 'number') {
+             console.warn("js-quantities returned invalid value for option:", option, { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", valueScalar);
+             return 0;
+        }
+
+        const totalValue = valueScalar * quantity * 100; // x100 shares per contract
+
+        return positionType === 'long' ? totalValue : -totalValue;
+
+    } catch (error) {
+        console.error("Error in js-quantities BS calculation for option:", option, error);
+        // Add more details about the inputs if possible
+        console.error("Inputs:", {optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility});
+        return 0;
+    }
+}
+
+/**
+ * Calculates the total cost basis of the portfolio.
+ * Long options cost money (positive cost), short options generate premium (negative cost).
+ * @param portfolio - The portfolio object.
+ * @returns The total cost basis.
+ */
+export function calculateTotalCostBasis(portfolio: Portfolio): number {
+  let totalCost = 0;
+
+  // Add cost of shares
+  portfolio.shares.forEach(share => {
+    totalCost += share.quantity * share.costBasisPerShare;
+  });
+
+  // Add/Subtract cost/premium of options
+  portfolio.options.forEach(option => {
+    const premiumEffect = option.premium * option.quantity * 100; // x100 shares per contract
+    if (option.positionType === 'long') {
+      totalCost += premiumEffect; // Paid premium increases cost basis
+    } else { // short
+      totalCost -= premiumEffect; // Received premium decreases cost basis
+    }
+  });
+
+  return totalCost;
+}
+
+/**
+ * Calculates the current *theoretical* total value of the entire portfolio.
+ * Uses js-quantities library for options.
+ * @param portfolio - The portfolio object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @param currentDate - The date for valuation (defaults to now).
+ * @param iv - Default Implied Volatility for options (decimal).
+ * @param rate - Default Risk-Free Rate for options (decimal).
+ * @returns The total theoretical value of the portfolio.
+ */
+export function calculatePortfolioTheoreticalValue(
+    portfolio: Portfolio,
+    underlyingPrice: number,
+    currentDate: Date = new Date(),
+    iv: number = DEFAULT_IMPLIED_VOLATILITY,
+    rate: number = DEFAULT_RISK_FREE_RATE
+): number {
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+
+    let totalValue = 0;
+
+    portfolio.shares.forEach(share => {
+        totalValue += calculateShareValue(share, underlyingPrice);
+    });
+
+    portfolio.options.forEach(option => {
+        // Pass IV and Rate to the option calculation
+        totalValue += calculateOptionTheoreticalValue(option, underlyingPrice, currentDate, iv, rate);
+    });
+
+    return totalValue;
+}
+
+/**
+ * Calculates the current *theoretical* Profit/Loss (P/L) of the portfolio.
+ * P/L = Current Theoretical Portfolio Value - Total Cost Basis
+ * @param portfolio - The portfolio object.
+ * @param underlyingPrice - The current price of the underlying stock.
+ * @param currentDate - The date for valuation (defaults to now).
+ * @param iv - Default Implied Volatility for options (decimal).
+ * @param rate - Default Risk-Free Rate for options (decimal).
+ * @returns The total theoretical P/L.
+ */
+export function calculatePortfolioPL(
+    portfolio: Portfolio,
+    underlyingPrice: number,
+    currentDate: Date = new Date(),
+    iv: number = DEFAULT_IMPLIED_VOLATILITY,
+    rate: number = DEFAULT_RISK_FREE_RATE
+): number {
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+
+    // Use the theoretical value calculation now
+    const currentTotalValue = calculatePortfolioTheoreticalValue(portfolio, underlyingPrice, currentDate, iv, rate);
+    const totalCostBasis = calculateTotalCostBasis(portfolio);
+
+    return currentTotalValue - totalCostBasis;
+}
+
+/**
+ * Generates an array of {price, pl} points for creating a P/L graph.
+ * Uses the theoretical P/L calculation (js-quantities) for consistency.
+ *
+ * @param portfolio - The portfolio object.
+ * @param rangeStart - The starting underlying price for the range.
+ * @param rangeEnd - The ending underlying price for the range.
+ * @param steps - The number of price points to calculate within the range.
+ * @param currentDate - The date for valuation (defaults to now).
+ * @param iv - Default Implied Volatility for options (decimal).
+ * @param rate - Default Risk-Free Rate for options (decimal).
+ * @returns An array of objects { price: number, pl: number }.
+ */
+export function generatePLData(
+  portfolio: Portfolio,
+  rangeStart: number,
+  rangeEnd: number,
+  steps: number = 50,
+  currentDate: Date = new Date(),
+  iv: number = DEFAULT_IMPLIED_VOLATILITY,
+  rate: number = DEFAULT_RISK_FREE_RATE
+): { price: number, pl: number }[] {
+  const data: { price: number, pl: number }[] = [];
+  if (rangeStart >= rangeEnd || steps <= 0) return data;
+
+  const stepSize = (rangeEnd - rangeStart) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const price = rangeStart + (i * stepSize);
+    const pl = calculatePortfolioPL(portfolio, price, currentDate, iv, rate);
+    if (isNaN(pl)) {
+        console.warn(`generatePLData: NaN P/L calculated for price ${price}`);
+    } else {
+        data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
+    }
+  }
+  return data;
+} 
+
+// ======= File: src\vite-env.d.ts =======
+
+/// <reference types="vite/client" />
+
+
+// ======= File: tsconfig.app.json =======
+
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}
+
+
+// ======= File: tsconfig.json =======
+
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+
+
+// ======= File: tsconfig.node.json =======
+
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+
+// ======= File: vite.config.ts =======
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  optimizeDeps: {
+    exclude: ['js-quantities'],
+  },
+})

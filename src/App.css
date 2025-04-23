@@ -1,0 +1,235 @@
+/* src/App.css */
+
+body {
+  background-color: #f8f9fa; /* Lighter background for the whole page */
+  color: #212529; /* Darker text color for better contrast */
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  max-width: 1000px; /* Max width for content */
+  width: 90%; /* Responsive width */
+  margin: 2rem auto; /* Centering and top/bottom margin */
+  padding: 2rem;
+  background-color: #ffffff; /* White card background */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Softer shadow */
+  text-align: left; /* Align text left within the container */
+}
+
+h1, h2 {
+  color: #343a40; /* Slightly darker heading color */
+  margin-top: 0; /* Remove default top margin */
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.75rem;
+  font-weight: 500;
+}
+
+/* Style for the raw data display */
+pre {
+  background-color: #f8f9fa; /* Very light grey background */
+  border: 1px solid #e1e5ea; /* Light border */
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
+  white-space: pre-wrap; /* Wrap text */
+  word-wrap: break-word;
+  color: #4a5568; /* Text color inside the pre block */
+  font-size: 0.9em;
+  max-height: 300px; /* Limit height and enable vertical scroll */
+  overflow-y: auto;
+  margin-top: 1rem; /* Space above the pre block */
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  display: block;
+  width: calc(100% - 2px); /* Adjust width to account for padding/border */
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* Utility class for spacing */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.position-form {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.position-form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.position-form button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.position-form button:hover {
+  background-color: #0056b3;
+}
+
+.current-status {
+  background-color: #e9ecef; /* Light background */
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #dee2e6;
+}
+
+.current-status h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-bottom: none; /* Remove border if already present */
+  font-size: 1.5rem; /* Slightly smaller heading */
+}
+
+.current-status .form-group label {
+   margin-right: 0.5rem;
+   font-weight: bold;
+}
+
+.current-status span {
+    font-size: 1.1rem;
+}
+
+.forms-container {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    align-items: flex-start; /* Align forms to the top */
+}
+
+.forms-container > div {
+    flex: 1; /* Allow forms to grow */
+    min-width: 350px; /* Minimum width before wrapping */
+}
+
+/* Ensure forms inside container don't add extra margin */
+.forms-container .position-form {
+    margin-bottom: 0;
+}
+
+/* Style for form action buttons container */
+.form-actions {
+    margin-top: 1.5rem; /* Add some space above buttons */
+}
+
+/* Style for the cancel button */
+.cancel-button {
+    padding: 0.75rem 1.5rem; /* Match submit button padding */
+    font-size: 1rem; /* Match submit button font size */
+    cursor: pointer;
+    background-color: #6c757d; /* Grey color */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+    background-color: #5a6268; /* Darker grey */
+}
+
+/* Help Text Styles */
+.help-toggle {
+  display: inline-block;
+  margin-left: 5px;
+  color: #007bff;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9em;
+  user-select: none;
+}
+
+.help-toggle:hover {
+  text-decoration: underline;
+}
+
+.help-text {
+  font-size: 0.85em;
+  color: #555;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  border-radius: 3px;
+}
+
+/* Adjust help text margin when inside form-group */
+.form-group .help-text {
+  margin-bottom: 0.5rem;
+}
