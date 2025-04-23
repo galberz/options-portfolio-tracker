@@ -278,7 +278,7 @@ function App() {
                 </strong>
               ) : (
                 <span style={{ color: '#555' }}>
-                  No crossover points found within the current price range.
+                  There are no crossover points found within the current price range.
                 </span>
               )}
             </div>
