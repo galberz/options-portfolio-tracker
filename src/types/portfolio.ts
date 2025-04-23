@@ -14,6 +14,7 @@ interface BasePosition {
 export interface SharePosition extends BasePosition {
   costBasisPerShare: number; // Price paid per share
   purchaseDate: string; // Date purchased (ISO 8601 format: "YYYY-MM-DD")
+  isIncludedInAnalysis?: boolean; // Defaults to true if undefined
 }
 
 // Interface for holding options
@@ -24,6 +25,7 @@ export interface OptionPosition extends BasePosition {
   premium: number; // Premium received (for short) or paid (for long) per contract
   expirationDate: string; // Expiration date (ISO 8601 format: "YYYY-MM-DD")
   tradeDate: string; // Date the option was bought/sold (ISO 8601 format: "YYYY-MM-DD")
+  isIncludedInAnalysis?: boolean; // Defaults to true if undefined
   // Note: 'quantity' represents the number of contracts (each typically controls 100 shares)
 }
 

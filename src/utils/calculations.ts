@@ -42,7 +42,7 @@ function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date
  * @returns The total value of the shares.
  */
 export function calculateShareValue(share: SharePosition, underlyingPrice: number): number {
-  if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+  if (isNaN(underlyingPrice) || underlyingPrice < 0 || share.isIncludedInAnalysis === false) return 0;
   return share.quantity * underlyingPrice;
 }
 
@@ -118,16 +118,20 @@ export function calculateTotalCostBasis(portfolio: Portfolio): number {
 
   // Add cost of shares
   portfolio.shares.forEach(share => {
-    totalCost += share.quantity * share.costBasisPerShare;
+    if (share.isIncludedInAnalysis !== false) {
+      totalCost += share.quantity * share.costBasisPerShare;
+    }
   });
 
   // Add/Subtract cost/premium of options
   portfolio.options.forEach(option => {
-    const premiumEffect = option.premium * option.quantity; // Premium is per contract
-    if (option.positionType === 'long') {
-      totalCost += premiumEffect; // Paid premium increases cost basis
-    } else { // short
-      totalCost -= premiumEffect; // Received premium decreases cost basis
+    if (option.isIncludedInAnalysis !== false) {
+      const premiumEffect = option.premium * option.quantity; // Premium is per contract
+      if (option.positionType === 'long') {
+        totalCost += premiumEffect; // Paid premium increases cost basis
+      } else { // short
+        totalCost -= premiumEffect; // Received premium decreases cost basis
+      }
     }
   });
 
@@ -156,12 +160,16 @@ export function calculatePortfolioTheoreticalValue(
     let totalValue = 0;
 
     portfolio.shares.forEach(share => {
+      if (share.isIncludedInAnalysis !== false) {
         totalValue += calculateShareValue(share, underlyingPrice);
+      }
     });
 
     portfolio.options.forEach(option => {
+      if (option.isIncludedInAnalysis !== false) {
         // Pass IV and Rate to the option calculation
         totalValue += calculateOptionTheoreticalValue(option, underlyingPrice, currentDate, iv, rate);
+      }
     });
 
     return totalValue;
@@ -241,7 +249,7 @@ export function calculateOptionValueAtExpiration(
   option: OptionPosition,
   underlyingPriceAtExpiration: number
 ): number {
-  if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0) return 0;
+  if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0 || option.isIncludedInAnalysis === false) return 0;
 
   const { strikePrice, optionType, positionType, quantity } = option;
   let intrinsicValuePerShare = 0;
@@ -253,44 +261,14 @@ export function calculateOptionValueAtExpiration(
   }
 
   const totalIntrinsicValue = intrinsicValuePerShare * quantity * 100; // x100 shares per contract
-
-  // Value is positive if long, negative if short (representing the obligation/asset value flip)
-  // However, for P/L calculation, we usually consider the *outcome*.
-  // A long call makes money if ITM, a short call loses money if ITM.
-  // Let's return the straightforward value *relative to zero* for now.
-  // The P/L calculation will handle the initial premium correctly.
-  // Wait, simplifying: the *value* of the position at expiration:
-  // Long Call/Put: Max(0, intrinsic value)
-  // Short Call/Put: -Max(0, intrinsic value) --> Liability if ITM
-   return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
-
-   // *** Correction: Rethinking P/L vs Value ***
-   // For P/L curve, we want the final profit/loss relative to the *initial trade*.
-   // P/L = (Value at Expiration - Initial Premium Effect)
-   // Let's adjust this function and the portfolio P/L function accordingly.
-
-   // Let's calculate the raw profit/loss *from the option itself* at expiration.
-   // Long Call P/L = (Max(0, S - K) * 100 * Q) - (Premium * 100 * Q)
-   // Short Call P/L = (Premium * 100 * Q) - (Max(0, S - K) * 100 * Q)
-   // Long Put P/L = (Max(0, K - S) * 100 * Q) - (Premium * 100 * Q)
-   // Short Put P/L = (Premium * 100 * Q) - (Max(0, K - S) * 100 * Q)
-
-   const initialPremiumEffect = option.premium * quantity * 100;
-
-   if (positionType === 'long') {
-       return totalIntrinsicValue - initialPremiumEffect;
-   } else { // short
-       return initialPremiumEffect - totalIntrinsicValue;
-   }
+  return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
 }
 
 /**
- * Calculates the total Profit/Loss (P/L) of the entire portfolio AT EXPIRATION.
- * This assumes all options expire at the given underlying price.
- * P/L = (Share P/L) + (Option P/L at Expiration)
+ * Calculates the total portfolio value AT EXPIRATION.
  * @param portfolio - The portfolio object.
  * @param underlyingPriceAtExpiration - The price of the underlying stock at expiration.
- * @returns The total P/L of the portfolio at expiration.
+ * @returns The total portfolio value at expiration.
  */
 export function calculatePortfolioPLAtExpiration(
   portfolio: Portfolio,
@@ -298,24 +276,24 @@ export function calculatePortfolioPLAtExpiration(
 ): number {
   if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0) return 0;
 
-  let totalPL = 0;
+  let totalValue = 0;
 
-  // 1. Calculate P/L from Shares
-  // P/L = (Current Value - Cost Basis)
+  // Add value of shares
   portfolio.shares.forEach(share => {
-    const currentShareValue = share.quantity * underlyingPriceAtExpiration;
-    const shareCostBasis = share.quantity * share.costBasisPerShare;
-    totalPL += (currentShareValue - shareCostBasis);
+    if (share.isIncludedInAnalysis !== false) {
+      totalValue += calculateShareValue(share, underlyingPriceAtExpiration);
+    }
   });
 
-  // 2. Calculate P/L from Options at Expiration
+  // Add value of options (intrinsic value only at expiration)
   portfolio.options.forEach(option => {
-    // We now use the dedicated expiration P/L function for each option
-    totalPL += calculateOptionValueAtExpiration(option, underlyingPriceAtExpiration);
-    // Note: calculateOptionValueAtExpiration now DIRECTLY calculates the P/L for that specific option trade (expiration value vs premium).
+    if (option.isIncludedInAnalysis !== false) {
+      totalValue += calculateOptionValueAtExpiration(option, underlyingPriceAtExpiration);
+    }
   });
 
-  return totalPL;
+  const totalCostBasis = calculateTotalCostBasis(portfolio);
+  return totalValue - totalCostBasis;
 }
 
 /**

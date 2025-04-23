@@ -23,6 +23,8 @@ interface PortfolioContextType {
   cancelEditing: () => void; // Function to stop editing
   updateShare: (id: string, updatedShareData: Omit<SharePosition, 'id'>) => void;
   updateOption: (id: string, updatedOptionData: Omit<OptionPosition, 'id'>) => void;
+  toggleShareInclusion: (id: string) => void;
+  toggleOptionInclusion: (id: string) => void;
   // --- END: Add Editing State and Functions ---
 }
 
@@ -79,6 +81,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     const newShare: SharePosition = {
       ...shareData,
       id: `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      isIncludedInAnalysis: true, // Initialize flag on add
     };
     setPortfolio((prev) => ({
       ...prev,
@@ -91,6 +94,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     const newOption: OptionPosition = {
       ...optionData,
       id: `option_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      isIncludedInAnalysis: true, // Initialize flag on add
     };
     setPortfolio((prev) => ({
       ...prev,
@@ -157,6 +161,29 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
   }, []);
   // --- END: Add Editing Control Functions ---
 
+  // Toggle functions for inclusion in analysis
+  const toggleShareInclusion = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.map((share) =>
+        share.id === id
+          ? { ...share, isIncludedInAnalysis: !(share.isIncludedInAnalysis ?? true) }
+          : share
+      ),
+    }));
+  }, []);
+
+  const toggleOptionInclusion = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.map((option) =>
+        option.id === id
+          ? { ...option, isIncludedInAnalysis: !(option.isIncludedInAnalysis ?? true) }
+          : option
+      ),
+    }));
+  }, []);
+
   // Value provided by the context
   const contextValue: PortfolioContextType = {
     portfolio,
@@ -172,6 +199,8 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     cancelEditing,
     updateShare,
     updateOption,
+    toggleShareInclusion,
+    toggleOptionInclusion,
     // --- END: Provide editing state and functions ---
   };
 

@@ -8,8 +8,17 @@ const ShareRow: React.FC<{
   share: SharePosition;
   onRemove: (id: string) => void;
   onEdit: (id: string, type: 'share' | 'option') => void;
-}> = ({ share, onRemove, onEdit }) => (
+  onToggleInclusion: (id: string) => void;
+}> = ({ share, onRemove, onEdit, onToggleInclusion }) => (
   <tr>
+    <td>
+      <input
+        type="checkbox"
+        checked={share.isIncludedInAnalysis !== false}
+        onChange={() => onToggleInclusion(share.id)}
+        title={share.isIncludedInAnalysis !== false ? "Exclude from analysis" : "Include in analysis"}
+      />
+    </td>
     <td>{share.ticker.toUpperCase()}</td>
     <td>{share.quantity}</td>
     <td>${share.costBasisPerShare.toFixed(2)}</td>
@@ -32,8 +41,17 @@ const OptionRow: React.FC<{
   option: OptionPosition;
   onRemove: (id: string) => void;
   onEdit: (id: string, type: 'share' | 'option') => void;
-}> = ({ option, onRemove, onEdit }) => (
+  onToggleInclusion: (id: string) => void;
+}> = ({ option, onRemove, onEdit, onToggleInclusion }) => (
   <tr>
+    <td>
+      <input
+        type="checkbox"
+        checked={option.isIncludedInAnalysis !== false}
+        onChange={() => onToggleInclusion(option.id)}
+        title={option.isIncludedInAnalysis !== false ? "Exclude from analysis" : "Include in analysis"}
+      />
+    </td>
     <td>{option.ticker.toUpperCase()}</td>
     <td>{option.quantity}</td>
     <td>{option.optionType.toUpperCase()}</td>
@@ -57,7 +75,14 @@ const OptionRow: React.FC<{
 
 // Main component to display both lists
 export const PositionList: React.FC = () => {
-  const { portfolio, removeShare, removeOption, startEditing } = usePortfolio();
+  const { 
+    portfolio, 
+    removeShare, 
+    removeOption, 
+    startEditing,
+    toggleShareInclusion,
+    toggleOptionInclusion 
+  } = usePortfolio();
 
   return (
     <div className="position-list-container">
@@ -66,6 +91,7 @@ export const PositionList: React.FC = () => {
         <table className="position-table">
           <thead>
             <tr>
+              <th title="Include in P/L calculations and chart?">Inc.</th>
               <th>Ticker</th>
               <th>Quantity</th>
               <th>Cost/Share</th>
@@ -80,6 +106,7 @@ export const PositionList: React.FC = () => {
                 share={share}
                 onRemove={removeShare}
                 onEdit={startEditing}
+                onToggleInclusion={toggleShareInclusion}
               />
             ))}
           </tbody>
@@ -93,6 +120,7 @@ export const PositionList: React.FC = () => {
         <table className="position-table">
           <thead>
             <tr>
+              <th title="Include in P/L calculations and chart?">Inc.</th>
               <th>Ticker</th>
               <th>Contracts</th>
               <th>Type</th>
@@ -111,6 +139,7 @@ export const PositionList: React.FC = () => {
                 option={option}
                 onRemove={removeOption}
                 onEdit={startEditing}
+                onToggleInclusion={toggleOptionInclusion}
               />
             ))}
           </tbody>
