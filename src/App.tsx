@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PositionList } from './components/PositionList';
 import { OptionForm } from './components/OptionForm';
 import { ShareForm } from './components/ShareForm';
 import { PLChart } from './components/PLChart';
 import { usePortfolio } from './contexts/PortfolioContext';
 import { calculatePortfolioPL, findCrossoverPoints } from './utils/calculations';
-import './App.css'; // You might want to remove default App.css styles later
+import { HelpModal } from './components/HelpModal';
+import './App.css';
+import './components/HelpModal.css';
 
 // --- Constants ---
 const DEFAULT_IV_PERCENT = 30;
@@ -26,6 +28,10 @@ function App() {
   const [showIvHelp, setShowIvHelp] = useState(false);
   const [showRateHelp, setShowRateHelp] = useState(false);
   const [showCrossoverHelp, setShowCrossoverHelp] = useState(false);
+
+  // --- START: Add State for Help Modal ---
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  // --- END: Add State for Help Modal ---
 
   // Convert state percentages to decimals for calculations
   const ivDecimal = useMemo(() => (impliedVolatility === '' ? (DEFAULT_IV_PERCENT / 100) : Number(impliedVolatility) / 100), [impliedVolatility]);
@@ -151,7 +157,15 @@ function App() {
       <p>Welcome! Let's track some options.</p>
 
       <div className="current-status">
-        <h2>Current Status & P/L Curve</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', marginBottom: '1rem' }}>
+             {/* Wrap H2 and Button */}
+            <h2>Current Status & P/L Curve</h2>
+            {/* --- START: Add Help Button --- */}
+            <button onClick={() => setIsHelpModalOpen(true)} className="help-button" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9em' }}>
+                Explain Chart (?)
+            </button>
+            {/* --- END: Add Help Button --- */}
+        </div>
 
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
           <div className="form-group" style={{ flex: '1 1 150px', marginBottom: '0' }}>
@@ -309,6 +323,14 @@ function App() {
 
       {/* Display the current positions */}
       <PositionList />
+
+      {/* --- START: Render Modal Conditionally --- */}
+      <HelpModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+      />
+      {/* --- END: Render Modal Conditionally --- */}
+
     </div>
   );
 }

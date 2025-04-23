@@ -123,7 +123,7 @@ export function calculateTotalCostBasis(portfolio: Portfolio): number {
 
   // Add/Subtract cost/premium of options
   portfolio.options.forEach(option => {
-    const premiumEffect = option.premium * option.quantity * 100; // x100 shares per contract
+    const premiumEffect = option.premium * option.quantity; // Premium is per contract
     if (option.positionType === 'long') {
       totalCost += premiumEffect; // Paid premium increases cost basis
     } else { // short

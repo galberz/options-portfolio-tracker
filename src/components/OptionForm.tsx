@@ -155,18 +155,22 @@ export const OptionForm: React.FC = () => {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="option-premium">Total Premium / Contract ($):</label>
+        <label htmlFor="option-premium">
+            TOTAL Premium / Contract ($): {/* Emphasize TOTAL */}
+        </label>
         <input
           id="option-premium"
           type="number"
           value={premium}
           onChange={(e) => setPremium(e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder={positionType === 'short' ? "e.g., 150.50 (Received)" : "e.g., 150.50 (Paid)"}
+          placeholder={positionType === 'short' ? "e.g., 800.00 (Total Received)" : "e.g., 1345.00 (Total Paid)"}
           min="0"
           step="0.01"
           required
         />
-        <small>{positionType === 'short' ? 'Enter the TOTAL premium received per contract.' : 'Enter the TOTAL premium paid per contract.'}</small>
+        <small>
+            Enter the TOTAL dollar amount paid (long) or received (short) for ONE single contract. Example: If the premium was quoted as $13.45 per share, you should enter <strong>1345</strong> here (i.e., $13.45 x 100).
+        </small>
       </div>
       <div className="form-group">
         <label htmlFor="option-trade-date">Trade Date:</label>

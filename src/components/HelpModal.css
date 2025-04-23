@@ -1,0 +1,85 @@
+/* ======= File: src/components/HelpModal.css ======= */
+
+.modal-overlay {
+  position: fixed; /* Stay in place */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+  display: flex;
+  align-items: center; /* Vertical center */
+  justify-content: center; /* Horizontal center */
+  z-index: 1000; /* Ensure it's on top */
+  padding: 20px; /* Add padding for smaller screens */
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  position: relative; /* Needed for absolute positioning of close button */
+  max-width: 700px; /* Max width of modal */
+  width: 90%; /* Responsive width */
+  max-height: 85vh; /* Max height */
+  overflow-y: auto; /* Allow vertical scrolling if content overflows */
+  text-align: left; /* Ensure text aligns left */
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+ .modal-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #444;
+ }
+
+.modal-content p,
+.modal-content li {
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: #555;
+}
+
+ .modal-content ul {
+    padding-left: 20px;
+ }
+  .modal-content li {
+    margin-bottom: 0.5rem;
+  }
+
+ .modal-content strong {
+    color: #333;
+ }
+
+ .modal-content section {
+    margin-bottom: 1.5rem;
+ }
+  .modal-content section:last-of-type {
+    margin-bottom: 1rem; /* Less margin on last section before button */
+ }
+
+
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.modal-close-btn:hover {
+  color: #333;
+} 
