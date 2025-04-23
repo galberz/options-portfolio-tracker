@@ -33,18 +33,6 @@ function App() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   // --- END: Add State for Help Modal ---
 
-  // Convert state percentages to decimals for calculations
-  const ivDecimal = useMemo(() => (impliedVolatility === '' ? (DEFAULT_IV_PERCENT / 100) : Number(impliedVolatility) / 100), [impliedVolatility]);
-  const rateDecimal = useMemo(() => (riskFreeRate === '' ? (DEFAULT_RATE_PERCENT / 100) : Number(riskFreeRate) / 100), [riskFreeRate]);
-
-  // Calculate P/L whenever portfolio, price, IV, or Rate changes
-  const currentPL = useMemo(() => {
-    if (currentPrice === '' || isNaN(Number(currentPrice))) {
-      return 0;
-    }
-    return calculatePortfolioPL(portfolio, Number(currentPrice), new Date(), ivDecimal, rateDecimal);
-  }, [portfolio, currentPrice, ivDecimal, rateDecimal]);
-
   // Basic price range calculation (can be refined later)
   const priceRange = useMemo(() => {
      let minStrike = Infinity;
@@ -99,17 +87,36 @@ function App() {
      return finalRange;
   }, [portfolio]);
 
+  // --- START: Add State for Manual Chart Range ---
+  const [chartRangeStart, setChartRangeStart] = useState<number | ''>(() => priceRange.low);
+  const [chartRangeEnd, setChartRangeEnd] = useState<number | ''>(() => priceRange.high);
+  // --- END: Add State for Manual Chart Range ---
+
+  // Convert state percentages to decimals for calculations
+  const ivDecimal = useMemo(() => (impliedVolatility === '' ? (DEFAULT_IV_PERCENT / 100) : Number(impliedVolatility) / 100), [impliedVolatility]);
+  const rateDecimal = useMemo(() => (riskFreeRate === '' ? (DEFAULT_RATE_PERCENT / 100) : Number(riskFreeRate) / 100), [riskFreeRate]);
+
+  // Calculate P/L whenever portfolio, price, IV, or Rate changes
+  const currentPL = useMemo(() => {
+    if (currentPrice === '' || isNaN(Number(currentPrice))) {
+      return 0;
+    }
+    return calculatePortfolioPL(portfolio, Number(currentPrice), new Date(), ivDecimal, rateDecimal);
+  }, [portfolio, currentPrice, ivDecimal, rateDecimal]);
+
   // Calculate crossover points whenever relevant inputs change
   const crossoverPoints = useMemo(() => {
     const qty = benchmarkQuantity === '' ? 0 : Number(benchmarkQuantity);
     const cost = benchmarkCostBasis === '' ? -1 : Number(benchmarkCostBasis);
+    const start = chartRangeStart === '' ? 0 : Number(chartRangeStart);
+    const end = chartRangeEnd === '' ? start + 100 : Number(chartRangeEnd);
 
     // Only calculate if benchmark is valid and price range exists
-    if (qty > 0 && cost >= 0 && priceRange.low < priceRange.high) {
-      return findCrossoverPoints(portfolio, qty, cost, priceRange.low, priceRange.high);
+    if (qty > 0 && cost >= 0 && start < end) {
+      return findCrossoverPoints(portfolio, qty, cost, start, end);
     }
     return []; // Return empty if benchmark not valid
-  }, [portfolio, benchmarkQuantity, benchmarkCostBasis, priceRange]);
+  }, [portfolio, benchmarkQuantity, benchmarkCostBasis, chartRangeStart, chartRangeEnd]);
 
   const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -150,6 +157,22 @@ function App() {
   };
   // --- END: Add Handlers for Benchmark ---
 
+  // --- START: Add Handlers for Chart Range ---
+  const handleRangeStartChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setChartRangeStart(value === '' ? '' : Number(value));
+    }
+  };
+
+  const handleRangeEndChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setChartRangeEnd(value === '' ? '' : Number(value));
+    }
+  };
+  // --- END: Add Handlers for Chart Range ---
+
   console.log('[App.tsx] Rendering with priceRange:', priceRange);
   return (
     <div className="app-container">
@@ -167,7 +190,7 @@ function App() {
             {/* --- END: Add Help Button --- */}
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'flex-start' }}>
           <div className="form-group" style={{ flex: '1 1 150px', marginBottom: '0' }}>
             <label htmlFor="current-price">Current Price ($):</label>
             <input
@@ -220,6 +243,32 @@ function App() {
               </p>
             )}
           </div>
+          {/* --- START: Add Chart Range Inputs --- */}
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="range-start">Chart Min ($):</label>
+            <input
+              id="range-start"
+              type="text"
+              inputMode="decimal"
+              value={chartRangeStart}
+              onChange={handleRangeStartChange}
+              placeholder="Min Price"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="range-end">Chart Max ($):</label>
+            <input
+              id="range-end"
+              type="text"
+              inputMode="decimal"
+              value={chartRangeEnd}
+              onChange={handleRangeEndChange}
+              placeholder="Max Price"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          {/* --- END: Add Chart Range Inputs --- */}
         </div>
 
         <details style={{ marginBottom: '1rem', border: '1px solid #eee', padding: '0.5rem', borderRadius: '4px' }}>
@@ -302,8 +351,8 @@ function App() {
         <PLChart
           portfolio={portfolio}
           currentPrice={currentPrice}
-          rangeStart={priceRange.low}
-          rangeEnd={priceRange.high}
+          rangeStart={chartRangeStart === '' ? 0 : Number(chartRangeStart)}
+          rangeEnd={chartRangeEnd === '' ? (chartRangeStart === '' ? 100 : Number(chartRangeStart) + 100) : Number(chartRangeEnd)}
           impliedVolatility={ivDecimal}
           riskFreeRate={rateDecimal}
           benchmarkQuantity={benchmarkQuantity === '' ? 0 : Number(benchmarkQuantity)}
