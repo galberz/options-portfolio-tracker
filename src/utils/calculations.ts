@@ -192,13 +192,29 @@ export function calculatePortfolioPL(
     iv: number = DEFAULT_IMPLIED_VOLATILITY,
     rate: number = DEFAULT_RISK_FREE_RATE
 ): number {
-    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) {
+         console.log(`CalcPL: Skipped due to invalid price ${underlyingPrice}`);
+         return 0;
+    }
 
-    // Use the theoretical value calculation now
+    // These are the two critical intermediate values:
     const currentTotalValue = calculatePortfolioTheoreticalValue(portfolio, underlyingPrice, currentDate, iv, rate);
     const totalCostBasis = calculateTotalCostBasis(portfolio);
+    const finalPL = currentTotalValue - totalCostBasis;
 
-    return currentTotalValue - totalCostBasis;
+    // --- START: Add Detailed Logging for Debugging ---
+    // Log only for prices below 200 to reduce console spam
+    if (underlyingPrice < 200) {
+         console.log(`--- CalcPL @ Price: ${underlyingPrice.toFixed(2)} ---`);
+         console.log(`   Total Theoretical Value: ${currentTotalValue.toFixed(2)}`);
+         console.log(`   Total Cost Basis: ${totalCostBasis.toFixed(2)}`);
+         console.log(`   Resulting P/L: ${finalPL.toFixed(2)}`);
+         // Optional: Log portfolio state used (might be too verbose)
+         // console.log(`   Portfolio used:`, JSON.stringify(portfolio));
+    }
+    // --- END: Add Detailed Logging ---
+
+    return finalPL; // Return the calculated P/L
 }
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PositionList } from './components/PositionList';
 import { OptionForm } from './components/OptionForm';
 import { ShareForm } from './components/ShareForm';
@@ -217,11 +217,6 @@ function App() {
               placeholder={`${DEFAULT_IV_PERCENT}`}
               style={{ marginBottom: '0' }}
             />
-            {showIvHelp && (
-              <p className="help-text">
-                Implied Volatility (IV) reflects the market's expectation of future price swings. Higher IV increases the theoretical option price (time value). Enter as a percentage (e.g., 30 for 30%).
-              </p>
-            )}
           </div>
           <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
             <label htmlFor="current-rate">
@@ -237,11 +232,6 @@ function App() {
               placeholder={`${DEFAULT_RATE_PERCENT}`}
               style={{ marginBottom: '0' }}
             />
-            {showRateHelp && (
-              <p className="help-text">
-                The theoretical return of a risk-free investment (like government bonds). It has a minor effect on option prices. Enter as an annual percentage (e.g., 4 for 4%).
-              </p>
-            )}
           </div>
           {/* --- START: Add Chart Range Inputs --- */}
           <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
@@ -270,6 +260,18 @@ function App() {
           </div>
           {/* --- END: Add Chart Range Inputs --- */}
         </div>
+
+        {/* Help text paragraphs moved outside the flex container */}
+        {showIvHelp && (
+          <p className="help-text" style={{marginBottom: '0.5rem'}}>
+            Implied Volatility (IV) reflects the market's expectation of future price swings. Higher IV increases the theoretical option price (time value). Enter as a percentage (e.g., 30 for 30%).
+          </p>
+        )}
+        {showRateHelp && (
+          <p className="help-text" style={{marginBottom: '0.5rem'}}>
+            The theoretical return of a risk-free investment (like government bonds). It has a minor effect on option prices. Enter as an annual percentage (e.g., 4 for 4%).
+          </p>
+        )}
 
         <details style={{ marginBottom: '1rem', border: '1px solid #eee', padding: '0.5rem', borderRadius: '4px' }}>
             <summary style={{ cursor: 'pointer', fontWeight: '500' }}>Benchmark: Buy & Hold</summary>

@@ -156,8 +156,9 @@ button:hover {
 }
 
 .current-status .form-group label {
-   margin-right: 0.5rem;
-   font-weight: bold;
+  min-height: 2.4em; /* Force labels to take up at least this much vertical space */
+  display: flex; /* Use flex to align label text and (?) span nicely */
+  align-items: center; /* Vertically center content within the label */
 }
 
 .current-status span {
