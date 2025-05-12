@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      black-scholes:
-        specifier: ^1.1.0
-        version: 1.1.0
       black-scholes-js:
         specifier: ^0.0.7
         version: 0.0.7
@@ -620,9 +617,6 @@ packages:
   black-scholes-js@0.0.7:
     resolution: {integrity: sha512-xOwIBvruRtukC+RKr0ExJazN+XIJUxjozGQ+hweLlGiAgGUBP9KzwNhwmXNxNelXI7xvEuIYLFCjFf6jXJohPA==}
     engines: {node: '>=4'}
-
-  black-scholes@1.1.0:
-    resolution: {integrity: sha512-23iaI490ai4pRclxWTM7BJyD8GzDibJCltLSX3xg86D3t8fzx67cqYSfL8WQLHnza1BhEeeA898XqpfRuQyQ2w==}
 
   brace-expansion@1.1.11:
     resolution: {integrity: sha512-iCuPHDFgrHX7H2vEI/5xpz07zSHB00TpugqhmYtVmMO6518mCuRMoOYFldEBl0g187ufozdaHgWKcYFb61qGiA==}
@@ -1943,8 +1937,6 @@ snapshots:
       tslib: 1.14.1
     transitivePeerDependencies:
       - supports-color
-
-  black-scholes@1.1.0: {}
 
   brace-expansion@1.1.11:
     dependencies:

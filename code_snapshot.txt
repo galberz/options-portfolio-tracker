@@ -1,4 +1,4 @@
-// Code Snapshot Generated: 2025-04-23T21:09:35.797Z
+// Code Snapshot Generated: 2025-05-12T12:49:08.515Z
 // Project Root: C:\Users\jread\Documents\Projects\Portfolio-tracker\options-portfolio-tracker
 // Included Directories: src, .
 // Included Extensions: .ts, .tsx, .js, .jsx, .css, .json
@@ -167,8 +167,9 @@ button:hover {
 }
 
 .current-status .form-group label {
-   margin-right: 0.5rem;
-   font-weight: bold;
+  min-height: 2.4em; /* Force labels to take up at least this much vertical space */
+  display: flex; /* Use flex to align label text and (?) span nicely */
+  align-items: center; /* Vertically center content within the label */
 }
 
 .current-status span {
@@ -193,6 +194,58 @@ button:hover {
     margin-bottom: 0;
 }
 
+/* Style for form action buttons container */
+.form-actions {
+    margin-top: 1.5rem; /* Add some space above buttons */
+}
+
+/* Style for the cancel button */
+.cancel-button {
+    padding: 0.75rem 1.5rem; /* Match submit button padding */
+    font-size: 1rem; /* Match submit button font size */
+    cursor: pointer;
+    background-color: #6c757d; /* Grey color */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+    background-color: #5a6268; /* Darker grey */
+}
+
+/* Help Text Styles */
+.help-toggle {
+  display: inline-block;
+  margin-left: 5px;
+  color: #007bff;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9em;
+  user-select: none;
+}
+
+.help-toggle:hover {
+  text-decoration: underline;
+}
+
+.help-text {
+  font-size: 0.85em;
+  color: #555;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  border-radius: 3px;
+}
+
+/* Adjust help text margin when inside form-group */
+.form-group .help-text {
+  margin-bottom: 0.5rem;
+}
+
 
 // ======= File: src\App.tsx =======
 
@@ -202,20 +255,34 @@ import { OptionForm } from './components/OptionForm';
 import { ShareForm } from './components/ShareForm';
 import { PLChart } from './components/PLChart';
 import { usePortfolio } from './contexts/PortfolioContext';
-import { calculatePortfolioPL } from './utils/calculations';
-import './App.css'; // You might want to remove default App.css styles later
+import { calculatePortfolioPL, findCrossoverPoints } from './utils/calculations';
+import { HelpModal } from './components/HelpModal';
+import './App.css';
+import './components/HelpModal.css';
+
+// --- Constants ---
+const DEFAULT_IV_PERCENT = 30;
+const DEFAULT_RATE_PERCENT = 4;
 
 function App() {
   const { portfolio } = usePortfolio();
   const [currentPrice, setCurrentPrice] = useState<number | ''>('');
+  const [impliedVolatility, setImpliedVolatility] = useState<number | ''>(DEFAULT_IV_PERCENT);
+  const [riskFreeRate, setRiskFreeRate] = useState<number | ''>(DEFAULT_RATE_PERCENT);
 
-  // Calculate P/L whenever portfolio or currentPrice changes
-  const currentPL = useMemo(() => {
-    if (currentPrice === '' || isNaN(Number(currentPrice))) {
-      return 0; // Or null/undefined to indicate no calculation
-    }
-    return calculatePortfolioPL(portfolio, Number(currentPrice));
-  }, [portfolio, currentPrice]);
+  // --- START: Add State for Benchmark ---
+  const [benchmarkQuantity, setBenchmarkQuantity] = useState<number | ''>('');
+  const [benchmarkCostBasis, setBenchmarkCostBasis] = useState<number | ''>('');
+  // --- END: Add State for Benchmark ---
+
+  // Add state for help text visibility
+  const [showIvHelp, setShowIvHelp] = useState(false);
+  const [showRateHelp, setShowRateHelp] = useState(false);
+  const [showCrossoverHelp, setShowCrossoverHelp] = useState(false);
+
+  // --- START: Add State for Help Modal ---
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  // --- END: Add State for Help Modal ---
 
   // Basic price range calculation (can be refined later)
   const priceRange = useMemo(() => {
@@ -271,13 +338,91 @@ function App() {
      return finalRange;
   }, [portfolio]);
 
+  // --- START: Add State for Manual Chart Range ---
+  const [chartRangeStart, setChartRangeStart] = useState<number | ''>(() => priceRange.low);
+  const [chartRangeEnd, setChartRangeEnd] = useState<number | ''>(() => priceRange.high);
+  // --- END: Add State for Manual Chart Range ---
+
+  // Convert state percentages to decimals for calculations
+  const ivDecimal = useMemo(() => (impliedVolatility === '' ? (DEFAULT_IV_PERCENT / 100) : Number(impliedVolatility) / 100), [impliedVolatility]);
+  const rateDecimal = useMemo(() => (riskFreeRate === '' ? (DEFAULT_RATE_PERCENT / 100) : Number(riskFreeRate) / 100), [riskFreeRate]);
+
+  // Calculate P/L whenever portfolio, price, IV, or Rate changes
+  const currentPL = useMemo(() => {
+    if (currentPrice === '' || isNaN(Number(currentPrice))) {
+      return 0;
+    }
+    return calculatePortfolioPL(portfolio, Number(currentPrice), new Date(), ivDecimal, rateDecimal);
+  }, [portfolio, currentPrice, ivDecimal, rateDecimal]);
+
+  // Calculate crossover points whenever relevant inputs change
+  const crossoverPoints = useMemo(() => {
+    const qty = benchmarkQuantity === '' ? 0 : Number(benchmarkQuantity);
+    const cost = benchmarkCostBasis === '' ? -1 : Number(benchmarkCostBasis);
+    const start = chartRangeStart === '' ? 0 : Number(chartRangeStart);
+    const end = chartRangeEnd === '' ? start + 100 : Number(chartRangeEnd);
+
+    // Only calculate if benchmark is valid and price range exists
+    if (qty > 0 && cost >= 0 && start < end) {
+      return findCrossoverPoints(portfolio, qty, cost, start, end);
+    }
+    return []; // Return empty if benchmark not valid
+  }, [portfolio, benchmarkQuantity, benchmarkCostBasis, chartRangeStart, chartRangeEnd]);
+
   const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
-    // Allow empty string or valid numbers (including decimals)
     if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-       setCurrentPrice(value === '' ? '' : Number(value));
+      setCurrentPrice(value === '' ? '' : Number(value));
     }
   };
+
+  const handleIVChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+      setImpliedVolatility(value === '' ? '' : Number(value));
+    }
+  };
+
+  const handleRateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+      setRiskFreeRate(value === '' ? '' : Number(value));
+    }
+  };
+
+  // --- START: Add Handlers for Benchmark ---
+  const handleBenchmarkQuantityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      // Allow empty or positive numbers (including decimals for potential future use, though whole shares are common for benchmarks)
+      if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+          setBenchmarkQuantity(value === '' ? '' : Number(value));
+      }
+  };
+
+  const handleBenchmarkCostBasisChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      // Allow empty or positive numbers (decimals needed for price)
+      if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+          setBenchmarkCostBasis(value === '' ? '' : Number(value));
+      }
+  };
+  // --- END: Add Handlers for Benchmark ---
+
+  // --- START: Add Handlers for Chart Range ---
+  const handleRangeStartChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setChartRangeStart(value === '' ? '' : Number(value));
+    }
+  };
+
+  const handleRangeEndChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setChartRangeEnd(value === '' ? '' : Number(value));
+    }
+  };
+  // --- END: Add Handlers for Chart Range ---
 
   console.log('[App.tsx] Rendering with priceRange:', priceRange);
   return (
@@ -285,32 +430,186 @@ function App() {
       <h1>Options Portfolio Tracker</h1>
       <p>Welcome! Let's track some options.</p>
 
-      {/* Current Price Input and P/L Display */}
       <div className="current-status">
-        <h2>Current Status & P/L Curve</h2>
-        <div className="form-group">
-           <label htmlFor="current-price">Current Underlying Price:</label>
-           <input
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', marginBottom: '1rem' }}>
+             {/* Wrap H2 and Button */}
+            <h2>Current Status & P/L Curve</h2>
+            {/* --- START: Add Help Button --- */}
+            <button onClick={() => setIsHelpModalOpen(true)} className="help-button" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9em' }}>
+                Explain Chart (?)
+            </button>
+            {/* --- END: Add Help Button --- */}
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'flex-start' }}>
+          <div className="form-group" style={{ flex: '1 1 150px', marginBottom: '0' }}>
+            <label htmlFor="current-price">Current Price ($):</label>
+            <input
               id="current-price"
-              type="text" // Use text to allow empty string and better control
-              inputMode="decimal" // Hint for mobile keyboards
+              type="text"
+              inputMode="decimal"
               value={currentPrice}
               onChange={handlePriceChange}
-              placeholder={`e.g., ${priceRange.low.toFixed(2)} - ${priceRange.high.toFixed(2)}`}
-              style={{ maxWidth: '200px', display: 'inline-block', marginRight: '10px' }} // Basic inline style
-           />
-           <span>
-             Current P/L:
-             <strong style={{ color: currentPL >= 0 ? 'green' : 'red', marginLeft: '5px' }}>
-               {currentPrice !== '' ? `$${currentPL.toFixed(2)}` : 'Enter price'}
-             </strong>
-           </span>
+              placeholder="e.g., 300.50"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="current-iv">
+              Implied Vol. (%):
+              <span className="help-toggle" onClick={() => setShowIvHelp(!showIvHelp)}>(?)</span>
+            </label>
+            <input
+              id="current-iv"
+              type="text"
+              inputMode="decimal"
+              value={impliedVolatility}
+              onChange={handleIVChange}
+              placeholder={`${DEFAULT_IV_PERCENT}`}
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="current-rate">
+              Risk-Free Rate (%):
+              <span className="help-toggle" onClick={() => setShowRateHelp(!showRateHelp)}>(?)</span>
+            </label>
+            <input
+              id="current-rate"
+              type="text"
+              inputMode="decimal"
+              value={riskFreeRate}
+              onChange={handleRateChange}
+              placeholder={`${DEFAULT_RATE_PERCENT}`}
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          {/* --- START: Add Chart Range Inputs --- */}
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="range-start">Chart Min ($):</label>
+            <input
+              id="range-start"
+              type="text"
+              inputMode="decimal"
+              value={chartRangeStart}
+              onChange={handleRangeStartChange}
+              placeholder="Min Price"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="range-end">Chart Max ($):</label>
+            <input
+              id="range-end"
+              type="text"
+              inputMode="decimal"
+              value={chartRangeEnd}
+              onChange={handleRangeEndChange}
+              placeholder="Max Price"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          {/* --- END: Add Chart Range Inputs --- */}
         </div>
+
+        {/* Help text paragraphs moved outside the flex container */}
+        {showIvHelp && (
+          <p className="help-text" style={{marginBottom: '0.5rem'}}>
+            Implied Volatility (IV) reflects the market's expectation of future price swings. Higher IV increases the theoretical option price (time value). Enter as a percentage (e.g., 30 for 30%).
+          </p>
+        )}
+        {showRateHelp && (
+          <p className="help-text" style={{marginBottom: '0.5rem'}}>
+            The theoretical return of a risk-free investment (like government bonds). It has a minor effect on option prices. Enter as an annual percentage (e.g., 4 for 4%).
+          </p>
+        )}
+
+        <details style={{ marginBottom: '1rem', border: '1px solid #eee', padding: '0.5rem', borderRadius: '4px' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: '500' }}>Benchmark: Buy & Hold</summary>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+                    <label htmlFor="benchmark-qty">Hold Quantity:</label>
+                    <input
+                        id="benchmark-qty"
+                        type="text" // Use text for flexible input
+                        inputMode="numeric" // Hint for integer, but allow decimals if logic handles it
+                        value={benchmarkQuantity}
+                        onChange={handleBenchmarkQuantityChange}
+                        placeholder="e.g., 200"
+                        style={{ marginBottom: '0' }}
+                    />
+                </div>
+                <div className="form-group" style={{ flex: '1 1 150px', marginBottom: '0' }}>
+                    <label htmlFor="benchmark-cost">Hold Cost Basis ($/Share):</label>
+                    <input
+                        id="benchmark-cost"
+                        type="text" // Use text for flexible input
+                        inputMode="decimal"
+                        value={benchmarkCostBasis}
+                        onChange={handleBenchmarkCostBasisChange}
+                        placeholder="e.g., 290.00"
+                         style={{ marginBottom: '0' }}
+                    />
+                </div>
+            </div>
+        </details>
+
+        <div style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+          <span>
+            Current Theoretical P/L:
+            <strong style={{ color: currentPL >= 0 ? 'green' : 'red', marginLeft: '5px' }}>
+              {currentPrice !== '' ? `$${currentPL.toFixed(2)}` : 'Enter price'}
+            </strong>
+            {currentPrice !== '' && (
+              <small style={{ marginLeft: '10px', color: '#555' }}>
+                (using IV: {impliedVolatility === '' ? DEFAULT_IV_PERCENT : impliedVolatility}%, Rate: {riskFreeRate === '' ? DEFAULT_RATE_PERCENT : riskFreeRate}%)
+              </small>
+            )}
+          </span>
+        </div>
+
+        {/* Display Crossover Points */}
+        {(benchmarkQuantity !== '' && Number(benchmarkQuantity) > 0 && benchmarkCostBasis !== '' && Number(benchmarkCostBasis) >= 0) && (
+          <div style={{ marginBottom: '1rem' }}>
+            {/* Persistent Label & Toggle */}
+            <div style={{ fontSize: '0.9em', color: '#333', marginBottom: '0.25rem' }}>
+              Crossover vs Benchmark:
+              <span className="help-toggle" onClick={() => setShowCrossoverHelp(!showCrossoverHelp)}>(?)</span>
+            </div>
+
+            {/* Conditional Help Text */}
+            {showCrossoverHelp && (
+              <p className="help-text" style={{ marginBottom: '0.5rem' }}>
+                This shows the estimated underlying price(s) where your current strategy's P/L (using the green **Expiration P/L** curve) equals the benchmark P/L.
+                Multiple crossover points are possible because options create non-linear payoff profiles.
+                The regions between/outside these points indicate where one strategy is calculated to be more profitable than the other at expiration.
+              </p>
+            )}
+
+            {/* Display calculated points OR "not found" message */}
+            <div style={{ fontSize: '0.9em', paddingLeft: '1rem' }}>
+              {crossoverPoints.length > 0 ? (
+                <strong style={{ color: '#333' }}>
+                  Approx. Price(s): {crossoverPoints.map(p => `$${p.toFixed(2)}`).join(', ')}
+                </strong>
+              ) : (
+                <span style={{ color: '#555' }}>
+                  There are no crossover points found within the current price range.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <PLChart
           portfolio={portfolio}
           currentPrice={currentPrice}
-          rangeStart={priceRange.low}
-          rangeEnd={priceRange.high}
+          rangeStart={chartRangeStart === '' ? 0 : Number(chartRangeStart)}
+          rangeEnd={chartRangeEnd === '' ? (chartRangeStart === '' ? 100 : Number(chartRangeStart) + 100) : Number(chartRangeEnd)}
+          impliedVolatility={ivDecimal}
+          riskFreeRate={rateDecimal}
+          benchmarkQuantity={benchmarkQuantity === '' ? 0 : Number(benchmarkQuantity)}
+          benchmarkCostBasis={benchmarkCostBasis === '' ? 0 : Number(benchmarkCostBasis)}
         />
       </div>
 
@@ -326,6 +625,14 @@ function App() {
 
       {/* Display the current positions */}
       <PositionList />
+
+      {/* --- START: Render Modal Conditionally --- */}
+      <HelpModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+      />
+      {/* --- END: Render Modal Conditionally --- */}
+
     </div>
   );
 }
@@ -333,14 +640,190 @@ function App() {
 export default App;
 
 
+// ======= File: src\components\HelpModal.css =======
+
+/* ======= File: src/components/HelpModal.css ======= */
+
+.modal-overlay {
+  position: fixed; /* Stay in place */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+  display: flex;
+  align-items: center; /* Vertical center */
+  justify-content: center; /* Horizontal center */
+  z-index: 1000; /* Ensure it's on top */
+  padding: 20px; /* Add padding for smaller screens */
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  position: relative; /* Needed for absolute positioning of close button */
+  max-width: 700px; /* Max width of modal */
+  width: 90%; /* Responsive width */
+  max-height: 85vh; /* Max height */
+  overflow-y: auto; /* Allow vertical scrolling if content overflows */
+  text-align: left; /* Ensure text aligns left */
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+ .modal-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #444;
+ }
+
+.modal-content p,
+.modal-content li {
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: #555;
+}
+
+ .modal-content ul {
+    padding-left: 20px;
+ }
+  .modal-content li {
+    margin-bottom: 0.5rem;
+  }
+
+ .modal-content strong {
+    color: #333;
+ }
+
+ .modal-content section {
+    margin-bottom: 1.5rem;
+ }
+  .modal-content section:last-of-type {
+    margin-bottom: 1rem; /* Less margin on last section before button */
+ }
+
+
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.modal-close-btn:hover {
+  color: #333;
+} 
+
+// ======= File: src\components\HelpModal.tsx =======
+
+import React from 'react';
+import './HelpModal.css'; // We will create this CSS file next
+
+interface HelpModalProps {
+  isOpen: boolean;
+  onClose: () => void; // Function to call when closing the modal
+}
+
+export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+  // Don't render the modal if it's not open
+  if (!isOpen) {
+    return null;
+  }
+
+  // Prevent clicks inside the modal content from closing it
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  return (
+    // Modal Overlay: Covers the screen, clicking closes modal
+    <div className="modal-overlay" onClick={onClose}>
+      {/* Modal Content Box: Centered, click inside doesn't close */}
+      <div className="modal-content" onClick={handleContentClick}>
+        {/* Close Button */}
+        <button className="modal-close-btn" onClick={onClose}>
+          &times; {/* Simple 'X' symbol */}
+        </button>
+
+        {/* --- Explanatory Content --- */}
+        <h2>Understanding the P/L Chart & Concepts</h2>
+
+        <section>
+          <h3>Why This Tool?</h3>
+          <p>
+            Options strategies involving shares, calls, puts, and assignments can be complex. It's often hard to grasp your true Profit/Loss potential or how your active trading compares to simpler strategies like just holding stock. This tool aims to clarify that by visualizing your potential outcomes based on the underlying asset's price. It helps analyze scenarios like covered calls being assigned, using puts to acquire shares, or holding multi-leg option positions.
+          </p>
+        </section>
+
+        <section>
+          <h3>The P/L Chart Lines</h3>
+          <p>The chart shows your entire portfolio's P/L (Y-axis) at different Underlying Prices (X-axis).</p>
+          <ul>
+            <li>
+              <strong>Expiration P/L (Green Line):</strong> Shows your calculated P/L exactly *at the moment the options expire*. It assumes all 'time value' is gone, and options are only worth their *intrinsic value* (how much they are in-the-money). This line often has sharp "kinks" at strike prices and reveals the fundamental payoff structure of your strategy if held to the end.
+            </li>
+            <li>
+              <strong>Theoretical P/L (Purple Line):</strong> Shows your calculated P/L *now* (using today's date, or the date implied by time to expiration), assuming the underlying price instantly changed to the value on the X-axis. It uses the Black-Scholes model, which includes **time value**. Time value is influenced by Time to Expiration, **Implied Volatility (IV)**, and Risk-Free Rate (Rf). Higher IV generally increases time value. As expiration approaches, this line will converge towards the green line (all else being equal). It helps understand the current "mark-to-market" value and sensitivity to IV/time.
+            </li>
+            <li>
+              <strong>Benchmark P/L (Dashed Line):</strong> Shows the P/L of the simple "Buy and Hold" scenario you defined in the Benchmark inputs (e.g., holding 200 shares @ $290). It's a straight line useful for comparing your active strategy's performance against "doing nothing".
+            </li>
+          </ul>
+        </section>
+
+         <section>
+            <h3>Crossover Points</h3>
+            <p>
+                This shows the estimated underlying price(s) where your current strategy's P/L (using the green **Expiration P/L** curve) equals the benchmark P/L. Multiple crossover points are possible because options create non-linear payoff profiles, unlike the linear benchmark. The regions between/outside these points indicate the price ranges where one strategy is calculated to be more profitable than the other *at expiration*.
+            </p>
+         </section>
+
+        <section>
+          <h3>Key Parameters</h3>
+          <ul>
+            <li><strong>Implied Volatility (IV %):</strong> Reflects the market's expectation of *future price swings*. Higher IV means the market expects bigger moves, which increases the theoretical time value of options (making them more expensive to buy / more valuable to sell).</li>
+            <li><strong>Risk-Free Rate (%):</strong> The theoretical return of a zero-risk investment (like government bonds). Used in pricing models for the time value of money and carrying costs. Usually has a much smaller impact on option prices than IV or time remaining.</li>
+          </ul>
+        </section>
+
+        <button onClick={onClose} style={{ marginTop: '1rem' }}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}; 
+
 // ======= File: src\components\OptionForm.tsx =======
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
 
 export const OptionForm: React.FC = () => {
-  const { addOption } = usePortfolio();
+  const {
+    addOption,
+    portfolio,
+    editingPositionId,
+    editingPositionType,
+    updateOption,
+    cancelEditing
+  } = usePortfolio();
+
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [strikePrice, setStrikePrice] = useState<number | ''>('');
@@ -350,6 +833,38 @@ export const OptionForm: React.FC = () => {
   const [optionType, setOptionType] = useState<OptionType>('call');
   const [positionType, setPositionType] = useState<PositionType>('short');
 
+  const isEditMode = useMemo(() => {
+    return editingPositionType === 'option' && editingPositionId !== null;
+  }, [editingPositionId, editingPositionType]);
+
+  useEffect(() => {
+    if (isEditMode && editingPositionId) {
+      const optionToEdit = portfolio.options.find(o => o.id === editingPositionId);
+      if (optionToEdit) {
+        setTicker(optionToEdit.ticker);
+        setQuantity(optionToEdit.quantity);
+        setStrikePrice(optionToEdit.strikePrice);
+        setPremium(optionToEdit.premium);
+        setExpirationDate(optionToEdit.expirationDate);
+        setTradeDate(optionToEdit.tradeDate);
+        setOptionType(optionToEdit.optionType);
+        setPositionType(optionToEdit.positionType);
+      } else {
+        console.warn(`Option with ID ${editingPositionId} not found for editing.`);
+        cancelEditing();
+      }
+    } else {
+      setTicker('');
+      setQuantity('');
+      setStrikePrice('');
+      setPremium('');
+      setExpirationDate('');
+      setTradeDate('');
+      setOptionType('call');
+      setPositionType('short');
+    }
+  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!ticker || quantity === '' || strikePrice === '' || premium === '' || !expirationDate || !tradeDate) {
@@ -357,7 +872,7 @@ export const OptionForm: React.FC = () => {
       return;
     }
 
-    const newOption: Omit<OptionPosition, 'id'> = {
+    const optionData: Omit<OptionPosition, 'id'> = {
       ticker: ticker.toUpperCase(),
       quantity: Number(quantity),
       strikePrice: Number(strikePrice),
@@ -368,22 +883,28 @@ export const OptionForm: React.FC = () => {
       positionType: positionType,
     };
 
-    addOption(newOption);
+    if (isEditMode && editingPositionId) {
+      updateOption(editingPositionId, optionData);
+    } else {
+      addOption(optionData);
+      setTicker('');
+      setQuantity('');
+      setStrikePrice('');
+      setPremium('');
+      setExpirationDate('');
+      setTradeDate('');
+      setOptionType('call');
+      setPositionType('short');
+    }
+  };
 
-    // Reset form
-    setTicker('');
-    setQuantity('');
-    setStrikePrice('');
-    setPremium('');
-    setExpirationDate('');
-    setTradeDate('');
-    setOptionType('call');
-    setPositionType('short');
+  const handleCancel = () => {
+    cancelEditing();
   };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">
-      <h3>Add Option Position</h3>
+      <h3>{isEditMode ? 'Edit Option Position' : 'Add Option Position'}</h3>
       <div className="form-group">
         <label htmlFor="option-ticker">Ticker:</label>
         <input
@@ -446,18 +967,22 @@ export const OptionForm: React.FC = () => {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="option-premium">Premium per Contract ($):</label>
+        <label htmlFor="option-premium">
+            TOTAL Premium / Contract ($): {/* Emphasize TOTAL */}
+        </label>
         <input
           id="option-premium"
           type="number"
           value={premium}
           onChange={(e) => setPremium(e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder={positionType === 'short' ? "Premium Received" : "Premium Paid"}
+          placeholder={positionType === 'short' ? "e.g., 800.00 (Total Received)" : "e.g., 1345.00 (Total Paid)"}
           min="0"
           step="0.01"
           required
         />
-        <small>{positionType === 'short' ? 'Enter the total premium received per contract.' : 'Enter the total premium paid per contract.'}</small>
+        <small>
+            Enter the TOTAL dollar amount paid (long) or received (short) for ONE single contract. Example: If the premium was quoted as $13.45 per share, you should enter <strong>1345</strong> here (i.e., $13.45 x 100).
+        </small>
       </div>
       <div className="form-group">
         <label htmlFor="option-trade-date">Trade Date:</label>
@@ -479,14 +1004,23 @@ export const OptionForm: React.FC = () => {
           required
         />
       </div>
-      <button type="submit">Add Option</button>
+      <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
+        <button type="submit" className="submit-button">
+          {isEditMode ? 'Save Changes' : 'Add Option'}
+        </button>
+        {isEditMode && (
+          <button type="button" onClick={handleCancel} className="cancel-button">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }; 
 
 // ======= File: src\components\PLChart.tsx =======
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -499,7 +1033,7 @@ import {
   ReferenceLine // To mark current price
 } from 'recharts';
 import { Portfolio } from '../types/portfolio';
-import { generatePLData } from '../utils/calculations';
+import { generatePLData, generateExpirationPLData, generateBenchmarkPLData } from '../utils/calculations';
 
 interface PLChartProps {
   portfolio: Portfolio;
@@ -507,6 +1041,12 @@ interface PLChartProps {
   rangeStart: number;
   rangeEnd: number;
   steps?: number; // Optional number of steps for data generation
+  impliedVolatility: number; // Expect decimal format from App
+  riskFreeRate: number;      // Expect decimal format from App
+  // --- START: Add Benchmark Props ---
+  benchmarkQuantity: number;
+  benchmarkCostBasis: number;
+  // --- END: Add Benchmark Props ---
 }
 
 export const PLChart: React.FC<PLChartProps> = ({
@@ -514,26 +1054,65 @@ export const PLChart: React.FC<PLChartProps> = ({
   currentPrice,
   rangeStart,
   rangeEnd,
-  steps = 100 // Increase steps for smoother curve
+  steps = 100,
+  impliedVolatility,
+  riskFreeRate,
+  // --- START: Destructure Benchmark Props ---
+  benchmarkQuantity,
+  benchmarkCostBasis,
+  // --- END: Destructure Benchmark Props ---
 }) => {
   // Optional: Keep logs for now if you want to see data generation
   console.log('[PLChart.tsx] Rendering Recharts component...');
 
-  // Generate the data points for the chart
-  const chartData = React.useMemo(() => {
-    console.log(`[PLChart.tsx] Generating Recharts data with range: ${rangeStart} to ${rangeEnd}`);
+  // Generate the data points for the THEORETICAL chart (existing)
+  const theoreticalChartData = useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Theoretical Recharts data with range: ${rangeStart} to ${rangeEnd}, IV: ${impliedVolatility}, Rate: ${riskFreeRate}`);
     if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
-        console.warn("[PLChart.tsx] Invalid range detected:", rangeStart, rangeEnd);
+        console.warn("[PLChart.tsx] Invalid range detected for theoretical data:", rangeStart, rangeEnd);
         return [];
     }
-    const data = generatePLData(portfolio, rangeStart, rangeEnd, steps);
-    console.log('[PLChart.tsx] Generated Recharts data:', data);
+    const data = generatePLData(portfolio, rangeStart, rangeEnd, steps, new Date(), impliedVolatility, riskFreeRate);
+    console.log('[PLChart.tsx] Generated Theoretical Recharts data:', data);
+    return data;
+  }, [portfolio, rangeStart, rangeEnd, steps, impliedVolatility, riskFreeRate]);
+
+  // --- START: ADD EXPIRATION DATA GENERATION ---
+  // Generate the data points for the EXPIRATION chart
+  const expirationChartData = useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Expiration Recharts data with range: ${rangeStart} to ${rangeEnd}`);
+     if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
+        console.warn("[PLChart.tsx] Invalid range detected for expiration data:", rangeStart, rangeEnd);
+        return [];
+    }
+    // Use the new function for expiration P/L
+    const data = generateExpirationPLData(portfolio, rangeStart, rangeEnd, steps);
+    console.log('[PLChart.tsx] Generated Expiration Recharts data:', data);
     return data;
   }, [portfolio, rangeStart, rangeEnd, steps]);
+  // --- END: ADD EXPIRATION DATA GENERATION ---
 
-  console.log('[PLChart.tsx] Recharts data length:', chartData.length);
+  // --- START: Generate Benchmark Data ---
+  const benchmarkChartData = useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Benchmark data with Qty: ${benchmarkQuantity}, Cost: ${benchmarkCostBasis}`);
+    // Only generate if quantity is greater than 0
+    if (benchmarkQuantity > 0 && benchmarkCostBasis >= 0) {
+        const data = generateBenchmarkPLData(benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps);
+         console.log('[PLChart.tsx] Generated Benchmark data:', data.length);
+        return data;
+    }
+    console.log('[PLChart.tsx] Skipping Benchmark data generation (invalid inputs).');
+    return []; // Return empty array if benchmark not defined
+  }, [benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps]);
+  // --- END: Generate Benchmark Data ---
 
-  if (chartData.length === 0) {
+  console.log('[PLChart.tsx] Theoretical Recharts data length:', theoreticalChartData.length);
+  console.log('[PLChart.tsx] Expiration Recharts data length:', expirationChartData.length); // Log new data length
+
+  // Check if *either* dataset is empty, or maybe base it on theoretical for now
+  const noData = theoreticalChartData.length === 0 && expirationChartData.length === 0 && benchmarkChartData.length === 0;
+
+  if (noData) {
     console.log('[PLChart.tsx] Rendering "Not enough data" message.');
     return <p style={{ textAlign: 'center', margin: '20px' }}>Not enough data to display P/L chart.</p>;
   }
@@ -541,7 +1120,7 @@ export const PLChart: React.FC<PLChartProps> = ({
   // Format currency for tooltip/axis
   const formatCurrency = (value: number) => `$${value.toFixed(0)}`; // Simple formatting
 
-  // --- ADD LOG FOR REFERENCE LINE CONDITIONS ---
+  // --- (Keep the log for ReferenceLine conditions) ---
   console.log('[PLChart.tsx] Checking ReferenceLine conditions:', {
     currentPrice: currentPrice,
     type: typeof currentPrice,
@@ -557,54 +1136,96 @@ export const PLChart: React.FC<PLChartProps> = ({
   return (
     <div style={{ width: '100%', height: 400 }}> {/* Define chart container size */}
       <ResponsiveContainer>
+        {/* Use the theoretical data as the primary source for the chart axes if needed, or let Recharts auto-adjust */}
         <LineChart
-          data={chartData}
+          // Consider merging data or letting Recharts handle multiple lines on shared axes
+          // data={theoreticalChartData} // We might remove this if feeding data directly to Lines
           margin={{
             top: 20,
-            right: 30,
+            right: 40, // Increased right margin for labels
             left: 20,
             bottom: 10,
           }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
           <XAxis
-             dataKey="price"
-             type="number"
-             domain={[rangeStart, rangeEnd]}
-             label={{ value: "Underlying Price ($)", position: "insideBottom", dy: 10, fill: '#666' }}
-             tickFormatter={(value) => `$${value}`}
-             stroke="#666"
-           />
+            dataKey="price"
+            type="number"
+            allowDuplicatedCategory={false} // Important when plotting multiple lines with same x-values
+            domain={[rangeStart, rangeEnd]}
+            label={{ value: "Underlying Price ($)", position: "insideBottom", dy: 10, fill: '#666' }}
+            tickFormatter={(value) => `$${value}`}
+            stroke="#666"
+          />
           <YAxis
             tickFormatter={formatCurrency}
             label={{ value: "Profit / Loss ($)", angle: -90, position: "insideLeft", dx: -10, fill: '#666' }}
             stroke="#666"
+            // Allow Recharts to determine the domain based on both datasets
+             domain={['auto', 'auto']}
           />
-          <Tooltip formatter={formatCurrency} labelFormatter={(label) => `Price: $${label.toFixed(2)}`} />
+          {/* Updated Tooltip to potentially show both P/L values if hovered */}
+           <Tooltip
+             formatter={(value, name) => {
+               const formattedValue = formatCurrency(value as number);
+               return [formattedValue, name];
+             }}
+             labelFormatter={(label) => `Price: $${Number(label).toFixed(2)}`}
+           />
           <Legend verticalAlign="top" height={36}/>
 
-          {/* Line representing P/L */}
+          {/* Line representing THEORETICAL P/L (Black-Scholes) */}
           <Line
-             type="monotone"
-             dataKey="pl"
-             name="Portfolio P/L"
-             stroke="#8884d8" // Purple line for P/L
-             strokeWidth={2}
-             dot={false} // Hide dots for smoother line
-           />
+            type="monotone"
+            data={theoreticalChartData} // Feed data directly to the line
+            dataKey="pl"
+            name="Theoretical P/L" // Updated name
+            stroke="#8884d8" // Purple line
+            strokeWidth={2}
+            dot={false}
+          />
 
-           {/* Zero P/L line (breakeven) */}
-           <ReferenceLine y={0} stroke="#a8a8a8" strokeDasharray="4 4" label={{ value: 'Breakeven', position: 'insideTopRight', fill: '#888' }} />
+          {/* --- START: ADD EXPIRATION P/L LINE --- */}
+          {/* Line representing EXPIRATION P/L */}
+          <Line
+            type="monotone"
+            data={expirationChartData} // Feed expiration data to this line
+            dataKey="pl"
+            name="Expiration P/L" // New name
+            stroke="#82ca9d" // Green line for expiration
+            strokeWidth={2}
+            dot={false}
+          />
+          {/* --- END: ADD EXPIRATION P/L LINE --- */}
 
-           {/* Line marking the current price */}
-           {currentPrice !== '' && typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd && (
-             <ReferenceLine
-                x={currentPrice}
-                stroke="green"
-                strokeWidth={2}
-                label={{ value: `Current: $${currentPrice.toFixed(2)}`, position: 'insideTopLeft', fill: 'green' }}
+          {/* --- START: Add Benchmark Line --- */}
+          {/* Only render if data exists */}
+          {benchmarkChartData.length > 0 && (
+              <Line
+                  type="linear" // Benchmark is usually linear
+                  data={benchmarkChartData}
+                  dataKey="pl"
+                  name="Benchmark P/L"
+                  stroke="#555555" // Dark grey color
+                  strokeWidth={1.5} // Slightly thinner?
+                  strokeDasharray="5 5" // Dashed line
+                  dot={false}
               />
-           )}
+          )}
+          {/* --- END: Add Benchmark Line --- */}
+
+          {/* Zero P/L line (breakeven) - remains the same */}
+          <ReferenceLine y={0} stroke="#a8a8a8" strokeDasharray="4 4" label={{ value: 'Breakeven', position: 'insideTopRight', fill: '#888' }} />
+
+          {/* Line marking the current price - remains the same */}
+          {currentPrice !== '' && typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd && (
+            <ReferenceLine
+              x={currentPrice}
+              stroke="orange" // Changed color slightly to contrast with green/purple
+              strokeWidth={2}
+              label={{ value: `Current: $${currentPrice.toFixed(2)}`, position: 'insideTopLeft', fill: 'orange', dy: -5 }} // Adjusted dy
+            />
+          )}
 
         </LineChart>
       </ResponsiveContainer>
@@ -662,10 +1283,34 @@ export const PLChart: React.FC<PLChartProps> = ({
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  vertical-align: middle;
 }
 
 .remove-btn:hover {
   background-color: #c82333; /* Darker red */
+}
+
+/* Edit button styling */
+.edit-btn {
+  padding: 0.2em 0.5em;
+  font-size: 0.8em;
+  line-height: 1;
+  background-color: #ffc107; /* Yellow/Orange */
+  color: #212529; /* Dark text */
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.edit-btn:hover {
+  background-color: #e0a800; /* Darker yellow/orange */
+}
+
+/* Adjust the cell containing the buttons */
+.position-table td:last-child {
+  white-space: nowrap; /* Prevent buttons from wrapping */
+  width: 1%; /* Prevent the column from taking too much space */
 } 
 
 // ======= File: src\components\PositionList.tsx =======
@@ -676,19 +1321,54 @@ import { SharePosition, OptionPosition } from '../types/portfolio';
 import './PositionList.css'; // We'll create this CSS file next
 
 // Sub-component to display a single share row
-const ShareRow: React.FC<{ share: SharePosition, onRemove: (id: string) => void }> = ({ share, onRemove }) => (
+const ShareRow: React.FC<{
+  share: SharePosition;
+  onRemove: (id: string) => void;
+  onEdit: (id: string, type: 'share' | 'option') => void;
+  onToggleInclusion: (id: string) => void;
+}> = ({ share, onRemove, onEdit, onToggleInclusion }) => (
   <tr>
+    <td>
+      <input
+        type="checkbox"
+        checked={share.isIncludedInAnalysis !== false}
+        onChange={() => onToggleInclusion(share.id)}
+        title={share.isIncludedInAnalysis !== false ? "Exclude from analysis" : "Include in analysis"}
+      />
+    </td>
     <td>{share.ticker.toUpperCase()}</td>
     <td>{share.quantity}</td>
     <td>${share.costBasisPerShare.toFixed(2)}</td>
     <td>{share.purchaseDate}</td>
-    <td><button onClick={() => onRemove(share.id)} className="remove-btn">X</button></td>
+    <td>
+      <button
+        onClick={() => onEdit(share.id, 'share')}
+        className="edit-btn"
+        style={{ marginRight: '5px' }}
+      >
+        Edit
+      </button>
+      <button onClick={() => onRemove(share.id)} className="remove-btn">X</button>
+    </td>
   </tr>
 );
 
 // Sub-component to display a single option row
-const OptionRow: React.FC<{ option: OptionPosition, onRemove: (id: string) => void }> = ({ option, onRemove }) => (
+const OptionRow: React.FC<{
+  option: OptionPosition;
+  onRemove: (id: string) => void;
+  onEdit: (id: string, type: 'share' | 'option') => void;
+  onToggleInclusion: (id: string) => void;
+}> = ({ option, onRemove, onEdit, onToggleInclusion }) => (
   <tr>
+    <td>
+      <input
+        type="checkbox"
+        checked={option.isIncludedInAnalysis !== false}
+        onChange={() => onToggleInclusion(option.id)}
+        title={option.isIncludedInAnalysis !== false ? "Exclude from analysis" : "Include in analysis"}
+      />
+    </td>
     <td>{option.ticker.toUpperCase()}</td>
     <td>{option.quantity}</td>
     <td>{option.optionType.toUpperCase()}</td>
@@ -697,13 +1377,29 @@ const OptionRow: React.FC<{ option: OptionPosition, onRemove: (id: string) => vo
     <td>${option.premium.toFixed(2)}</td>
     <td>{option.tradeDate}</td>
     <td>{option.expirationDate}</td>
-    <td><button onClick={() => onRemove(option.id)} className="remove-btn">X</button></td>
+    <td>
+      <button
+        onClick={() => onEdit(option.id, 'option')}
+        className="edit-btn"
+        style={{ marginRight: '5px' }}
+      >
+        Edit
+      </button>
+      <button onClick={() => onRemove(option.id)} className="remove-btn">X</button>
+    </td>
   </tr>
 );
 
 // Main component to display both lists
 export const PositionList: React.FC = () => {
-  const { portfolio, removeShare, removeOption } = usePortfolio();
+  const { 
+    portfolio, 
+    removeShare, 
+    removeOption, 
+    startEditing,
+    toggleShareInclusion,
+    toggleOptionInclusion 
+  } = usePortfolio();
 
   return (
     <div className="position-list-container">
@@ -712,16 +1408,23 @@ export const PositionList: React.FC = () => {
         <table className="position-table">
           <thead>
             <tr>
+              <th title="Include in P/L calculations and chart?">Inc.</th>
               <th>Ticker</th>
               <th>Quantity</th>
               <th>Cost/Share</th>
               <th>Purchase Date</th>
-              <th>Remove</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {portfolio.shares.map((share) => (
-              <ShareRow key={share.id} share={share} onRemove={removeShare} />
+              <ShareRow
+                key={share.id}
+                share={share}
+                onRemove={removeShare}
+                onEdit={startEditing}
+                onToggleInclusion={toggleShareInclusion}
+              />
             ))}
           </tbody>
         </table>
@@ -734,6 +1437,7 @@ export const PositionList: React.FC = () => {
         <table className="position-table">
           <thead>
             <tr>
+              <th title="Include in P/L calculations and chart?">Inc.</th>
               <th>Ticker</th>
               <th>Contracts</th>
               <th>Type</th>
@@ -742,12 +1446,18 @@ export const PositionList: React.FC = () => {
               <th>Premium</th>
               <th>Trade Date</th>
               <th>Expiration</th>
-              <th>Remove</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {portfolio.options.map((option) => (
-              <OptionRow key={option.id} option={option} onRemove={removeOption} />
+              <OptionRow
+                key={option.id}
+                option={option}
+                onRemove={removeOption}
+                onEdit={startEditing}
+                onToggleInclusion={toggleOptionInclusion}
+              />
             ))}
           </tbody>
         </table>
@@ -760,16 +1470,48 @@ export const PositionList: React.FC = () => {
 
 // ======= File: src\components\ShareForm.tsx =======
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { SharePosition } from '../types/portfolio';
 
 export const ShareForm: React.FC = () => {
-  const { addShare } = usePortfolio();
+  const {
+    addShare,
+    portfolio,
+    editingPositionId,
+    editingPositionType,
+    updateShare,
+    cancelEditing
+  } = usePortfolio();
+
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [costBasisPerShare, setCostBasisPerShare] = useState<number | ''>('');
   const [purchaseDate, setPurchaseDate] = useState('');
+
+  const isEditMode = useMemo(() => {
+    return editingPositionType === 'share' && editingPositionId !== null;
+  }, [editingPositionId, editingPositionType]);
+
+  useEffect(() => {
+    if (isEditMode && editingPositionId) {
+      const shareToEdit = portfolio.shares.find(s => s.id === editingPositionId);
+      if (shareToEdit) {
+        setTicker(shareToEdit.ticker);
+        setQuantity(shareToEdit.quantity);
+        setCostBasisPerShare(shareToEdit.costBasisPerShare);
+        setPurchaseDate(shareToEdit.purchaseDate);
+      } else {
+        console.warn(`Share with ID ${editingPositionId} not found for editing.`);
+        cancelEditing();
+      }
+    } else {
+      setTicker('');
+      setQuantity('');
+      setCostBasisPerShare('');
+      setPurchaseDate('');
+    }
+  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -778,25 +1520,31 @@ export const ShareForm: React.FC = () => {
       return;
     }
 
-    const newShare: Omit<SharePosition, 'id'> = {
+    const shareData: Omit<SharePosition, 'id'> = {
       ticker: ticker.toUpperCase(),
       quantity: Number(quantity),
       costBasisPerShare: Number(costBasisPerShare),
       purchaseDate: purchaseDate,
     };
 
-    addShare(newShare);
+    if (isEditMode && editingPositionId) {
+      updateShare(editingPositionId, shareData);
+    } else {
+      addShare(shareData);
+      setTicker('');
+      setQuantity('');
+      setCostBasisPerShare('');
+      setPurchaseDate('');
+    }
+  };
 
-    // Reset form
-    setTicker('');
-    setQuantity('');
-    setCostBasisPerShare('');
-    setPurchaseDate('');
+  const handleCancel = () => {
+    cancelEditing();
   };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">
-      <h3>Add Share Position</h3>
+      <h3>{isEditMode ? 'Edit Share Position' : 'Add Share Position'}</h3>
       <div className="form-group">
         <label htmlFor="share-ticker">Ticker:</label>
         <input
@@ -815,8 +1563,8 @@ export const ShareForm: React.FC = () => {
           type="number"
           value={quantity}
           onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder="Enter quantity"
-          min="1"
+          placeholder="e.g., 10.5"
+          step="any"
           required
         />
       </div>
@@ -843,9 +1591,16 @@ export const ShareForm: React.FC = () => {
           required
         />
       </div>
-      <button type="submit" className="submit-button">
-        Add Share Position
-      </button>
+      <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
+        <button type="submit" className="submit-button">
+          {isEditMode ? 'Save Changes' : 'Add Share Position'}
+        </button>
+        {isEditMode && (
+          <button type="button" onClick={handleCancel} className="cancel-button">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }; 
@@ -869,8 +1624,17 @@ interface PortfolioContextType {
   addOption: (option: Omit<OptionPosition, 'id'>) => void;
   removeShare: (id: string) => void;
   removeOption: (id: string) => void;
-  // We can add update functions later
-  loadPortfolio: (loadedPortfolio: Portfolio) => void; // Function to load data (e.g., from file)
+  loadPortfolio: (loadedPortfolio: Portfolio) => void;
+  // --- START: Add Editing State and Functions ---
+  editingPositionId: string | null; // ID of the item being edited
+  editingPositionType: 'share' | 'option' | null; // Type of item being edited
+  startEditing: (id: string, type: 'share' | 'option') => void; // Function to begin editing
+  cancelEditing: () => void; // Function to stop editing
+  updateShare: (id: string, updatedShareData: Omit<SharePosition, 'id'>) => void;
+  updateOption: (id: string, updatedOptionData: Omit<OptionPosition, 'id'>) => void;
+  toggleShareInclusion: (id: string) => void;
+  toggleOptionInclusion: (id: string) => void;
+  // --- END: Add Editing State and Functions ---
 }
 
 // Create the context with an undefined initial value
@@ -907,6 +1671,11 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     }
   });
 
+  // --- START: Add Editing State Variables ---
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [editingPositionType, setEditingPositionType] = useState<'share' | 'option' | null>(null);
+  // --- END: Add Editing State Variables ---
+
   // Save portfolio to local storage whenever it changes
   useEffect(() => {
     try {
@@ -921,6 +1690,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     const newShare: SharePosition = {
       ...shareData,
       id: `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      isIncludedInAnalysis: true, // Initialize flag on add
     };
     setPortfolio((prev) => ({
       ...prev,
@@ -933,6 +1703,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     const newOption: OptionPosition = {
       ...optionData,
       id: `option_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      isIncludedInAnalysis: true, // Initialize flag on add
     };
     setPortfolio((prev) => ({
       ...prev,
@@ -963,6 +1734,65 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     setPortfolio(loadedPortfolio);
   }, []);
 
+  // --- START: Add Update Functions ---
+  const updateShare = useCallback((id: string, updatedShareData: Omit<SharePosition, 'id'>) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.map((share) =>
+        share.id === id ? { ...updatedShareData, id } : share
+      ),
+    }));
+    setEditingPositionId(null); // Stop editing after update
+    setEditingPositionType(null);
+  }, []);
+
+  const updateOption = useCallback((id: string, updatedOptionData: Omit<OptionPosition, 'id'>) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.map((option) =>
+        option.id === id ? { ...updatedOptionData, id } : option
+      ),
+    }));
+    setEditingPositionId(null); // Stop editing after update
+    setEditingPositionType(null);
+  }, []);
+  // --- END: Add Update Functions ---
+
+  // --- START: Add Editing Control Functions ---
+  const startEditing = useCallback((id: string, type: 'share' | 'option') => {
+    setEditingPositionId(id);
+    setEditingPositionType(type);
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingPositionId(null);
+    setEditingPositionType(null);
+  }, []);
+  // --- END: Add Editing Control Functions ---
+
+  // Toggle functions for inclusion in analysis
+  const toggleShareInclusion = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.map((share) =>
+        share.id === id
+          ? { ...share, isIncludedInAnalysis: !(share.isIncludedInAnalysis ?? true) }
+          : share
+      ),
+    }));
+  }, []);
+
+  const toggleOptionInclusion = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.map((option) =>
+        option.id === id
+          ? { ...option, isIncludedInAnalysis: !(option.isIncludedInAnalysis ?? true) }
+          : option
+      ),
+    }));
+  }, []);
+
   // Value provided by the context
   const contextValue: PortfolioContextType = {
     portfolio,
@@ -971,6 +1801,16 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     removeShare,
     removeOption,
     loadPortfolio,
+    // --- START: Provide editing state and functions ---
+    editingPositionId,
+    editingPositionType,
+    startEditing,
+    cancelEditing,
+    updateShare,
+    updateOption,
+    toggleShareInclusion,
+    toggleOptionInclusion,
+    // --- END: Provide editing state and functions ---
   };
 
   return (
@@ -1146,27 +1986,36 @@ createRoot(document.getElementById('root')!).render(
 )
 
 
-// ======= File: src\types\js-quantities.d.ts =======
+// ======= File: src\types\black-scholes-js.d.ts =======
 
-declare module 'js-quantities' {
-    class Qty {
-        constructor(value: number, unit?: string);
-        static BlackScholes(
-            type: 'call' | 'put',
-            spot: number,
-            strike: number,
-            expiry: number,
-            rate: number,
-            vol: number
-        ): Qty;
-        scalar: number;
+declare module 'black-scholes-js' {
+    export class BlackScholes {
+        constructor(stock: string, strike: number, time: number, riskFree: number, deviation: number, type: 'call' | 'put');
+        calculate(): number;
     }
-    export default Qty;
-}
+} 
 
-declare module 'js-quantities/esm/extras/finance' {
-    // This module is imported for its side effects (adding finance-related functionality to Qty)
-    // No exports are needed
+// ======= File: src\types\black-scholes.d.ts =======
+
+declare module 'black-scholes' {
+    /**
+     * Calculates the Black-Scholes option price
+     * @param stockPrice - Current stock price
+     * @param strikePrice - Strike price
+     * @param timeToExpiration - Time to expiration in years
+     * @param volatility - Volatility (decimal, e.g., 0.30 for 30%)
+     * @param riskFreeRate - Risk-free rate (decimal, e.g., 0.04 for 4%)
+     * @param isCall - true for call option, false for put option
+     * @returns The theoretical option price
+     */
+    export function blackScholes(
+        stockPrice: number,
+        strikePrice: number,
+        timeToExpiration: number,
+        volatility: number,
+        riskFreeRate: number,
+        isCall: boolean
+    ): number;
 } 
 
 // ======= File: src\types\portfolio.ts =======
@@ -1187,6 +2036,7 @@ interface BasePosition {
 export interface SharePosition extends BasePosition {
   costBasisPerShare: number; // Price paid per share
   purchaseDate: string; // Date purchased (ISO 8601 format: "YYYY-MM-DD")
+  isIncludedInAnalysis?: boolean; // Defaults to true if undefined
 }
 
 // Interface for holding options
@@ -1197,6 +2047,7 @@ export interface OptionPosition extends BasePosition {
   premium: number; // Premium received (for short) or paid (for long) per contract
   expirationDate: string; // Expiration date (ISO 8601 format: "YYYY-MM-DD")
   tradeDate: string; // Date the option was bought/sold (ISO 8601 format: "YYYY-MM-DD")
+  isIncludedInAnalysis?: boolean; // Defaults to true if undefined
   // Note: 'quantity' represents the number of contracts (each typically controls 100 shares)
 }
 
@@ -1219,9 +2070,8 @@ export interface AssignmentEvent {
 
 // src/utils/calculations.ts
 
-import { Portfolio, SharePosition, OptionPosition, OptionType } from '../types/portfolio';
-// Import the main constructor only
-import Qty from 'js-quantities';
+import { BlackScholes } from 'black-scholes-js';
+import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
 
 // --- Constants and Defaults ---
 const DEFAULT_IMPLIED_VOLATILITY = 0.30; // 30% default IV
@@ -1262,7 +2112,7 @@ function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date
  * @returns The total value of the shares.
  */
 export function calculateShareValue(share: SharePosition, underlyingPrice: number): number {
-  if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+  if (isNaN(underlyingPrice) || underlyingPrice < 0 || share.isIncludedInAnalysis === false) return 0;
   return share.quantity * underlyingPrice;
 }
 
@@ -1302,34 +2152,27 @@ export function calculateOptionTheoreticalValue(
     }
 
     try {
-        // Use the js-quantities Black-Scholes function
-        // Qty.BlackScholes(type, spot, strike, expiry, rate, vol)
-        // Note: expiry is in years
-        const theoreticalValuePerShare = Qty.BlackScholes(
-            optionType,         // 'call' or 'put'
-            underlyingPrice,    // spot
-            strikePrice,        // strike
-            timeToExpirationYears, // expiry (in years)
-            riskFreeRate,       // rate
-            impliedVolatility   // vol
+        const bs = new BlackScholes(
+            underlyingPrice.toString(), // stock price as string
+            strikePrice,                // strike price
+            timeToExpirationYears,      // time to expiry in years
+            riskFreeRate,               // risk-free rate
+            impliedVolatility,          // volatility
+            optionType                  // 'call' or 'put'
         );
+        const theoreticalValuePerShare = bs.calculate();
 
-        // js-quantities returns a Qty object, we need the scalar value
-        const valueScalar = theoreticalValuePerShare.scalar;
-
-        if (isNaN(valueScalar) || typeof valueScalar !== 'number') {
-             console.warn("js-quantities returned invalid value for option:", option, { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", valueScalar);
-             return 0;
+        if (isNaN(theoreticalValuePerShare) || typeof theoreticalValuePerShare !== 'number') {
+            console.warn("black-scholes-js returned invalid value:", { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", theoreticalValuePerShare);
+            return 0;
         }
 
-        const totalValue = valueScalar * quantity * 100; // x100 shares per contract
-
+        const totalValue = theoreticalValuePerShare * quantity * 100;
         return positionType === 'long' ? totalValue : -totalValue;
 
     } catch (error) {
-        console.error("Error in js-quantities BS calculation for option:", option, error);
-        // Add more details about the inputs if possible
-        console.error("Inputs:", {optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility});
+        console.error("Error in black-scholes-js calculation:", option, error);
+        console.error("Inputs:", { optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility });
         return 0;
     }
 }
@@ -1345,16 +2188,20 @@ export function calculateTotalCostBasis(portfolio: Portfolio): number {
 
   // Add cost of shares
   portfolio.shares.forEach(share => {
-    totalCost += share.quantity * share.costBasisPerShare;
+    if (share.isIncludedInAnalysis !== false) {
+      totalCost += share.quantity * share.costBasisPerShare;
+    }
   });
 
   // Add/Subtract cost/premium of options
   portfolio.options.forEach(option => {
-    const premiumEffect = option.premium * option.quantity * 100; // x100 shares per contract
-    if (option.positionType === 'long') {
-      totalCost += premiumEffect; // Paid premium increases cost basis
-    } else { // short
-      totalCost -= premiumEffect; // Received premium decreases cost basis
+    if (option.isIncludedInAnalysis !== false) {
+      const premiumEffect = option.premium * option.quantity; // Premium is per contract
+      if (option.positionType === 'long') {
+        totalCost += premiumEffect; // Paid premium increases cost basis
+      } else { // short
+        totalCost -= premiumEffect; // Received premium decreases cost basis
+      }
     }
   });
 
@@ -1383,12 +2230,16 @@ export function calculatePortfolioTheoreticalValue(
     let totalValue = 0;
 
     portfolio.shares.forEach(share => {
+      if (share.isIncludedInAnalysis !== false) {
         totalValue += calculateShareValue(share, underlyingPrice);
+      }
     });
 
     portfolio.options.forEach(option => {
+      if (option.isIncludedInAnalysis !== false) {
         // Pass IV and Rate to the option calculation
         totalValue += calculateOptionTheoreticalValue(option, underlyingPrice, currentDate, iv, rate);
+      }
     });
 
     return totalValue;
@@ -1411,13 +2262,29 @@ export function calculatePortfolioPL(
     iv: number = DEFAULT_IMPLIED_VOLATILITY,
     rate: number = DEFAULT_RISK_FREE_RATE
 ): number {
-    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) {
+         console.log(`CalcPL: Skipped due to invalid price ${underlyingPrice}`);
+         return 0;
+    }
 
-    // Use the theoretical value calculation now
+    // These are the two critical intermediate values:
     const currentTotalValue = calculatePortfolioTheoreticalValue(portfolio, underlyingPrice, currentDate, iv, rate);
     const totalCostBasis = calculateTotalCostBasis(portfolio);
+    const finalPL = currentTotalValue - totalCostBasis;
 
-    return currentTotalValue - totalCostBasis;
+    // --- START: Add Detailed Logging for Debugging ---
+    // Log only for prices below 200 to reduce console spam
+    if (underlyingPrice < 200) {
+         console.log(`--- CalcPL @ Price: ${underlyingPrice.toFixed(2)} ---`);
+         console.log(`   Total Theoretical Value: ${currentTotalValue.toFixed(2)}`);
+         console.log(`   Total Cost Basis: ${totalCostBasis.toFixed(2)}`);
+         console.log(`   Resulting P/L: ${finalPL.toFixed(2)}`);
+         // Optional: Log portfolio state used (might be too verbose)
+         // console.log(`   Portfolio used:`, JSON.stringify(portfolio));
+    }
+    // --- END: Add Detailed Logging ---
+
+    return finalPL; // Return the calculated P/L
 }
 
 /**
@@ -1456,6 +2323,214 @@ export function generatePLData(
     }
   }
   return data;
+}
+
+/**
+ * Calculates the value of a single option position AT EXPIRATION based on intrinsic value.
+ * @param option - The option position object.
+ * @param underlyingPriceAtExpiration - The price of the underlying stock at expiration.
+ * @returns The total intrinsic value of the option position at expiration (positive for long, negative for short).
+ */
+export function calculateOptionValueAtExpiration(
+  option: OptionPosition,
+  underlyingPriceAtExpiration: number
+): number {
+  if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0 || option.isIncludedInAnalysis === false) return 0;
+
+  const { strikePrice, optionType, positionType, quantity } = option;
+  let intrinsicValuePerShare = 0;
+
+  if (optionType === 'call') {
+    intrinsicValuePerShare = Math.max(0, underlyingPriceAtExpiration - strikePrice);
+  } else { // put
+    intrinsicValuePerShare = Math.max(0, strikePrice - underlyingPriceAtExpiration);
+  }
+
+  const totalIntrinsicValue = intrinsicValuePerShare * quantity * 100; // x100 shares per contract
+  return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
+}
+
+/**
+ * Calculates the total portfolio value AT EXPIRATION.
+ * @param portfolio - The portfolio object.
+ * @param underlyingPriceAtExpiration - The price of the underlying stock at expiration.
+ * @returns The total portfolio value at expiration.
+ */
+export function calculatePortfolioPLAtExpiration(
+  portfolio: Portfolio,
+  underlyingPriceAtExpiration: number
+): number {
+  if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0) return 0;
+
+  let totalValue = 0;
+
+  // Add value of shares
+  portfolio.shares.forEach(share => {
+    if (share.isIncludedInAnalysis !== false) {
+      totalValue += calculateShareValue(share, underlyingPriceAtExpiration);
+    }
+  });
+
+  // Add value of options (intrinsic value only at expiration)
+  portfolio.options.forEach(option => {
+    if (option.isIncludedInAnalysis !== false) {
+      totalValue += calculateOptionValueAtExpiration(option, underlyingPriceAtExpiration);
+    }
+  });
+
+  const totalCostBasis = calculateTotalCostBasis(portfolio);
+  return totalValue - totalCostBasis;
+}
+
+/**
+ * Generates an array of {price, pl} points for creating an EXPIRATION P/L graph.
+ *
+ * @param portfolio - The portfolio object.
+ * @param rangeStart - The starting underlying price for the range.
+ * @param rangeEnd - The ending underlying price for the range.
+ * @param steps - The number of price points to calculate within the range.
+ * @returns An array of objects { price: number, pl: number }.
+ */
+export function generateExpirationPLData(
+  portfolio: Portfolio,
+  rangeStart: number,
+  rangeEnd: number,
+  steps: number = 50
+): { price: number, pl: number }[] {
+  const data: { price: number, pl: number }[] = [];
+  if (rangeStart >= rangeEnd || steps <= 0) return data;
+
+  const stepSize = (rangeEnd - rangeStart) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const price = rangeStart + (i * stepSize);
+    // Use the specific expiration P/L calculation
+    const pl = calculatePortfolioPLAtExpiration(portfolio, price);
+    if (isNaN(pl)) {
+       console.warn(`generateExpirationPLData: NaN P/L calculated for price ${price}`);
+    } else {
+       data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
+    }
+  }
+  return data;
+}
+
+// --- START: Add Benchmark Calculation Functions ---
+
+/**
+ * Calculates the Profit/Loss for a simple Buy & Hold benchmark strategy.
+ * @param quantity - Number of shares held in the benchmark.
+ * @param costBasisPerShare - The average cost per share for the benchmark holding.
+ * @param underlyingPrice - The current or projected price of the underlying.
+ * @returns The total P/L of the benchmark position.
+ */
+export function calculateBenchmarkPL(
+  quantity: number,
+  costBasisPerShare: number,
+  underlyingPrice: number
+): number {
+  if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || isNaN(underlyingPrice)) {
+    return 0; // Return 0 if inputs are invalid or quantity is zero
+  }
+  const currentValue = quantity * underlyingPrice;
+  const initialCost = quantity * costBasisPerShare;
+  return currentValue - initialCost;
+}
+
+/**
+ * Generates an array of {price, pl} points for a Buy & Hold benchmark P/L graph.
+ * @param quantity - Number of shares held in the benchmark.
+ * @param costBasisPerShare - The average cost per share for the benchmark holding.
+ * @param rangeStart - The starting underlying price for the range.
+ * @param rangeEnd - The ending underlying price for the range.
+ * @param steps - The number of price points to calculate within the range.
+ * @returns An array of objects { price: number, pl: number }.
+ */
+export function generateBenchmarkPLData(
+  quantity: number,
+  costBasisPerShare: number,
+  rangeStart: number,
+  rangeEnd: number,
+  steps: number = 50
+): { price: number, pl: number }[] {
+  const data: { price: number, pl: number }[] = [];
+  // Only generate data if quantity and cost basis are valid positive numbers
+  if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || costBasisPerShare < 0 || rangeStart >= rangeEnd || steps <= 0) {
+       return data; // Return empty array if benchmark isn't properly defined or range is invalid
+  }
+
+  const stepSize = (rangeEnd - rangeStart) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const price = rangeStart + (i * stepSize);
+    const pl = calculateBenchmarkPL(quantity, costBasisPerShare, price);
+    // Benchmark P/L should not be NaN if inputs are valid numbers
+    data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
+  }
+  return data;
+}
+// --- END: Add Benchmark Calculation Functions --- 
+
+/**
+ * Finds approximate underlying price points where the portfolio's expiration P/L
+ * crosses over the benchmark P/L.
+ *
+ * @param portfolio - The current portfolio.
+ * @param benchmarkQuantity - Number of shares in the benchmark.
+ * @param benchmarkCostBasis - Cost basis per share for the benchmark.
+ * @param rangeStart - The starting price for analysis (should match chart).
+ * @param rangeEnd - The ending price for analysis (should match chart).
+ * @param steps - The number of steps for analysis (should match chart).
+ * @returns An array of approximate crossover prices. Returns empty array if none found or invalid inputs.
+ */
+export function findCrossoverPoints(
+    portfolio: Portfolio,
+    benchmarkQuantity: number,
+    benchmarkCostBasis: number,
+    rangeStart: number,
+    rangeEnd: number,
+    steps: number = 100 // Use a reasonable number of steps, matching chart is good
+): number[] {
+    const crossovers: number[] = [];
+
+    // Ensure valid benchmark parameters and range
+    if (benchmarkQuantity <= 0 || benchmarkCostBasis < 0 || rangeStart >= rangeEnd || steps <= 0) {
+        return crossovers; // Cannot calculate crossovers without a valid benchmark/range
+    }
+
+    // Generate the data points for both curves
+    // Use a higher number of steps for potentially better accuracy if desired
+    const expirationData = generateExpirationPLData(portfolio, rangeStart, rangeEnd, steps);
+    const benchmarkData = generateBenchmarkPLData(benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps);
+
+    // Ensure data was generated and arrays match length (they should if ranges/steps are same)
+    if (expirationData.length === 0 || benchmarkData.length === 0 || expirationData.length !== benchmarkData.length) {
+        console.warn("Crossover calc: Data generation failed or lengths mismatch.");
+        return crossovers;
+    }
+
+    // Iterate through the data points, looking for sign changes in the difference
+    let prevDiff = expirationData[0].pl - benchmarkData[0].pl;
+
+    for (let i = 1; i < expirationData.length; i++) {
+        const currentDiff = expirationData[i].pl - benchmarkData[i].pl;
+
+        // Check if the difference crossed zero (sign change)
+        // (prevDiff < 0 && currentDiff >= 0) -> Crossed from below
+        // (prevDiff > 0 && currentDiff <= 0) -> Crossed from above
+        if ((prevDiff < 0 && currentDiff >= 0) || (prevDiff > 0 && currentDiff <= 0)) {
+            // We found a crossover between point i-1 and i.
+            // For simplicity, we can take the price at point i as the approximate crossover.
+            // More advanced: Interpolate between price i-1 and i based on P/L values.
+            crossovers.push(expirationData[i].price);
+        }
+
+        // Don't update prevDiff if currentDiff is exactly 0 to catch subsequent crossings
+        if (currentDiff !== 0) {
+             prevDiff = currentDiff;
+        }
+    }
+
+    console.log("[Calculations] Found Crossover Points:", crossovers);
+    return crossovers;
 } 
 
 // ======= File: src\vite-env.d.ts =======
@@ -1526,7 +2601,7 @@ export default tseslint.config(
     "preview": "vite preview"
   },
   "dependencies": {
-    "js-quantities": "^1.8.0",
+    "black-scholes-js": "^0.0.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.3"
@@ -1707,8 +2782,9 @@ button:hover {
 }
 
 .current-status .form-group label {
-   margin-right: 0.5rem;
-   font-weight: bold;
+  min-height: 2.4em; /* Force labels to take up at least this much vertical space */
+  display: flex; /* Use flex to align label text and (?) span nicely */
+  align-items: center; /* Vertically center content within the label */
 }
 
 .current-status span {
@@ -1733,6 +2809,58 @@ button:hover {
     margin-bottom: 0;
 }
 
+/* Style for form action buttons container */
+.form-actions {
+    margin-top: 1.5rem; /* Add some space above buttons */
+}
+
+/* Style for the cancel button */
+.cancel-button {
+    padding: 0.75rem 1.5rem; /* Match submit button padding */
+    font-size: 1rem; /* Match submit button font size */
+    cursor: pointer;
+    background-color: #6c757d; /* Grey color */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+    background-color: #5a6268; /* Darker grey */
+}
+
+/* Help Text Styles */
+.help-toggle {
+  display: inline-block;
+  margin-left: 5px;
+  color: #007bff;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9em;
+  user-select: none;
+}
+
+.help-toggle:hover {
+  text-decoration: underline;
+}
+
+.help-text {
+  font-size: 0.85em;
+  color: #555;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  border-radius: 3px;
+}
+
+/* Adjust help text margin when inside form-group */
+.form-group .help-text {
+  margin-bottom: 0.5rem;
+}
+
 
 // ======= File: src\App.tsx =======
 
@@ -1742,20 +2870,34 @@ import { OptionForm } from './components/OptionForm';
 import { ShareForm } from './components/ShareForm';
 import { PLChart } from './components/PLChart';
 import { usePortfolio } from './contexts/PortfolioContext';
-import { calculatePortfolioPL } from './utils/calculations';
-import './App.css'; // You might want to remove default App.css styles later
+import { calculatePortfolioPL, findCrossoverPoints } from './utils/calculations';
+import { HelpModal } from './components/HelpModal';
+import './App.css';
+import './components/HelpModal.css';
+
+// --- Constants ---
+const DEFAULT_IV_PERCENT = 30;
+const DEFAULT_RATE_PERCENT = 4;
 
 function App() {
   const { portfolio } = usePortfolio();
   const [currentPrice, setCurrentPrice] = useState<number | ''>('');
+  const [impliedVolatility, setImpliedVolatility] = useState<number | ''>(DEFAULT_IV_PERCENT);
+  const [riskFreeRate, setRiskFreeRate] = useState<number | ''>(DEFAULT_RATE_PERCENT);
 
-  // Calculate P/L whenever portfolio or currentPrice changes
-  const currentPL = useMemo(() => {
-    if (currentPrice === '' || isNaN(Number(currentPrice))) {
-      return 0; // Or null/undefined to indicate no calculation
-    }
-    return calculatePortfolioPL(portfolio, Number(currentPrice));
-  }, [portfolio, currentPrice]);
+  // --- START: Add State for Benchmark ---
+  const [benchmarkQuantity, setBenchmarkQuantity] = useState<number | ''>('');
+  const [benchmarkCostBasis, setBenchmarkCostBasis] = useState<number | ''>('');
+  // --- END: Add State for Benchmark ---
+
+  // Add state for help text visibility
+  const [showIvHelp, setShowIvHelp] = useState(false);
+  const [showRateHelp, setShowRateHelp] = useState(false);
+  const [showCrossoverHelp, setShowCrossoverHelp] = useState(false);
+
+  // --- START: Add State for Help Modal ---
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  // --- END: Add State for Help Modal ---
 
   // Basic price range calculation (can be refined later)
   const priceRange = useMemo(() => {
@@ -1811,13 +2953,91 @@ function App() {
      return finalRange;
   }, [portfolio]);
 
+  // --- START: Add State for Manual Chart Range ---
+  const [chartRangeStart, setChartRangeStart] = useState<number | ''>(() => priceRange.low);
+  const [chartRangeEnd, setChartRangeEnd] = useState<number | ''>(() => priceRange.high);
+  // --- END: Add State for Manual Chart Range ---
+
+  // Convert state percentages to decimals for calculations
+  const ivDecimal = useMemo(() => (impliedVolatility === '' ? (DEFAULT_IV_PERCENT / 100) : Number(impliedVolatility) / 100), [impliedVolatility]);
+  const rateDecimal = useMemo(() => (riskFreeRate === '' ? (DEFAULT_RATE_PERCENT / 100) : Number(riskFreeRate) / 100), [riskFreeRate]);
+
+  // Calculate P/L whenever portfolio, price, IV, or Rate changes
+  const currentPL = useMemo(() => {
+    if (currentPrice === '' || isNaN(Number(currentPrice))) {
+      return 0;
+    }
+    return calculatePortfolioPL(portfolio, Number(currentPrice), new Date(), ivDecimal, rateDecimal);
+  }, [portfolio, currentPrice, ivDecimal, rateDecimal]);
+
+  // Calculate crossover points whenever relevant inputs change
+  const crossoverPoints = useMemo(() => {
+    const qty = benchmarkQuantity === '' ? 0 : Number(benchmarkQuantity);
+    const cost = benchmarkCostBasis === '' ? -1 : Number(benchmarkCostBasis);
+    const start = chartRangeStart === '' ? 0 : Number(chartRangeStart);
+    const end = chartRangeEnd === '' ? start + 100 : Number(chartRangeEnd);
+
+    // Only calculate if benchmark is valid and price range exists
+    if (qty > 0 && cost >= 0 && start < end) {
+      return findCrossoverPoints(portfolio, qty, cost, start, end);
+    }
+    return []; // Return empty if benchmark not valid
+  }, [portfolio, benchmarkQuantity, benchmarkCostBasis, chartRangeStart, chartRangeEnd]);
+
   const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
-    // Allow empty string or valid numbers (including decimals)
     if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-       setCurrentPrice(value === '' ? '' : Number(value));
+      setCurrentPrice(value === '' ? '' : Number(value));
     }
   };
+
+  const handleIVChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+      setImpliedVolatility(value === '' ? '' : Number(value));
+    }
+  };
+
+  const handleRateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+      setRiskFreeRate(value === '' ? '' : Number(value));
+    }
+  };
+
+  // --- START: Add Handlers for Benchmark ---
+  const handleBenchmarkQuantityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      // Allow empty or positive numbers (including decimals for potential future use, though whole shares are common for benchmarks)
+      if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+          setBenchmarkQuantity(value === '' ? '' : Number(value));
+      }
+  };
+
+  const handleBenchmarkCostBasisChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      // Allow empty or positive numbers (decimals needed for price)
+      if (value === '' || (/^[0-9]*\.?[0-9]*$/.test(value) && Number(value) >= 0)) {
+          setBenchmarkCostBasis(value === '' ? '' : Number(value));
+      }
+  };
+  // --- END: Add Handlers for Benchmark ---
+
+  // --- START: Add Handlers for Chart Range ---
+  const handleRangeStartChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setChartRangeStart(value === '' ? '' : Number(value));
+    }
+  };
+
+  const handleRangeEndChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setChartRangeEnd(value === '' ? '' : Number(value));
+    }
+  };
+  // --- END: Add Handlers for Chart Range ---
 
   console.log('[App.tsx] Rendering with priceRange:', priceRange);
   return (
@@ -1825,32 +3045,186 @@ function App() {
       <h1>Options Portfolio Tracker</h1>
       <p>Welcome! Let's track some options.</p>
 
-      {/* Current Price Input and P/L Display */}
       <div className="current-status">
-        <h2>Current Status & P/L Curve</h2>
-        <div className="form-group">
-           <label htmlFor="current-price">Current Underlying Price:</label>
-           <input
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', marginBottom: '1rem' }}>
+             {/* Wrap H2 and Button */}
+            <h2>Current Status & P/L Curve</h2>
+            {/* --- START: Add Help Button --- */}
+            <button onClick={() => setIsHelpModalOpen(true)} className="help-button" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9em' }}>
+                Explain Chart (?)
+            </button>
+            {/* --- END: Add Help Button --- */}
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'flex-start' }}>
+          <div className="form-group" style={{ flex: '1 1 150px', marginBottom: '0' }}>
+            <label htmlFor="current-price">Current Price ($):</label>
+            <input
               id="current-price"
-              type="text" // Use text to allow empty string and better control
-              inputMode="decimal" // Hint for mobile keyboards
+              type="text"
+              inputMode="decimal"
               value={currentPrice}
               onChange={handlePriceChange}
-              placeholder={`e.g., ${priceRange.low.toFixed(2)} - ${priceRange.high.toFixed(2)}`}
-              style={{ maxWidth: '200px', display: 'inline-block', marginRight: '10px' }} // Basic inline style
-           />
-           <span>
-             Current P/L:
-             <strong style={{ color: currentPL >= 0 ? 'green' : 'red', marginLeft: '5px' }}>
-               {currentPrice !== '' ? `$${currentPL.toFixed(2)}` : 'Enter price'}
-             </strong>
-           </span>
+              placeholder="e.g., 300.50"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="current-iv">
+              Implied Vol. (%):
+              <span className="help-toggle" onClick={() => setShowIvHelp(!showIvHelp)}>(?)</span>
+            </label>
+            <input
+              id="current-iv"
+              type="text"
+              inputMode="decimal"
+              value={impliedVolatility}
+              onChange={handleIVChange}
+              placeholder={`${DEFAULT_IV_PERCENT}`}
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="current-rate">
+              Risk-Free Rate (%):
+              <span className="help-toggle" onClick={() => setShowRateHelp(!showRateHelp)}>(?)</span>
+            </label>
+            <input
+              id="current-rate"
+              type="text"
+              inputMode="decimal"
+              value={riskFreeRate}
+              onChange={handleRateChange}
+              placeholder={`${DEFAULT_RATE_PERCENT}`}
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          {/* --- START: Add Chart Range Inputs --- */}
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="range-start">Chart Min ($):</label>
+            <input
+              id="range-start"
+              type="text"
+              inputMode="decimal"
+              value={chartRangeStart}
+              onChange={handleRangeStartChange}
+              placeholder="Min Price"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+            <label htmlFor="range-end">Chart Max ($):</label>
+            <input
+              id="range-end"
+              type="text"
+              inputMode="decimal"
+              value={chartRangeEnd}
+              onChange={handleRangeEndChange}
+              placeholder="Max Price"
+              style={{ marginBottom: '0' }}
+            />
+          </div>
+          {/* --- END: Add Chart Range Inputs --- */}
         </div>
+
+        {/* Help text paragraphs moved outside the flex container */}
+        {showIvHelp && (
+          <p className="help-text" style={{marginBottom: '0.5rem'}}>
+            Implied Volatility (IV) reflects the market's expectation of future price swings. Higher IV increases the theoretical option price (time value). Enter as a percentage (e.g., 30 for 30%).
+          </p>
+        )}
+        {showRateHelp && (
+          <p className="help-text" style={{marginBottom: '0.5rem'}}>
+            The theoretical return of a risk-free investment (like government bonds). It has a minor effect on option prices. Enter as an annual percentage (e.g., 4 for 4%).
+          </p>
+        )}
+
+        <details style={{ marginBottom: '1rem', border: '1px solid #eee', padding: '0.5rem', borderRadius: '4px' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: '500' }}>Benchmark: Buy & Hold</summary>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <div className="form-group" style={{ flex: '1 1 100px', marginBottom: '0' }}>
+                    <label htmlFor="benchmark-qty">Hold Quantity:</label>
+                    <input
+                        id="benchmark-qty"
+                        type="text" // Use text for flexible input
+                        inputMode="numeric" // Hint for integer, but allow decimals if logic handles it
+                        value={benchmarkQuantity}
+                        onChange={handleBenchmarkQuantityChange}
+                        placeholder="e.g., 200"
+                        style={{ marginBottom: '0' }}
+                    />
+                </div>
+                <div className="form-group" style={{ flex: '1 1 150px', marginBottom: '0' }}>
+                    <label htmlFor="benchmark-cost">Hold Cost Basis ($/Share):</label>
+                    <input
+                        id="benchmark-cost"
+                        type="text" // Use text for flexible input
+                        inputMode="decimal"
+                        value={benchmarkCostBasis}
+                        onChange={handleBenchmarkCostBasisChange}
+                        placeholder="e.g., 290.00"
+                         style={{ marginBottom: '0' }}
+                    />
+                </div>
+            </div>
+        </details>
+
+        <div style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+          <span>
+            Current Theoretical P/L:
+            <strong style={{ color: currentPL >= 0 ? 'green' : 'red', marginLeft: '5px' }}>
+              {currentPrice !== '' ? `$${currentPL.toFixed(2)}` : 'Enter price'}
+            </strong>
+            {currentPrice !== '' && (
+              <small style={{ marginLeft: '10px', color: '#555' }}>
+                (using IV: {impliedVolatility === '' ? DEFAULT_IV_PERCENT : impliedVolatility}%, Rate: {riskFreeRate === '' ? DEFAULT_RATE_PERCENT : riskFreeRate}%)
+              </small>
+            )}
+          </span>
+        </div>
+
+        {/* Display Crossover Points */}
+        {(benchmarkQuantity !== '' && Number(benchmarkQuantity) > 0 && benchmarkCostBasis !== '' && Number(benchmarkCostBasis) >= 0) && (
+          <div style={{ marginBottom: '1rem' }}>
+            {/* Persistent Label & Toggle */}
+            <div style={{ fontSize: '0.9em', color: '#333', marginBottom: '0.25rem' }}>
+              Crossover vs Benchmark:
+              <span className="help-toggle" onClick={() => setShowCrossoverHelp(!showCrossoverHelp)}>(?)</span>
+            </div>
+
+            {/* Conditional Help Text */}
+            {showCrossoverHelp && (
+              <p className="help-text" style={{ marginBottom: '0.5rem' }}>
+                This shows the estimated underlying price(s) where your current strategy's P/L (using the green **Expiration P/L** curve) equals the benchmark P/L.
+                Multiple crossover points are possible because options create non-linear payoff profiles.
+                The regions between/outside these points indicate where one strategy is calculated to be more profitable than the other at expiration.
+              </p>
+            )}
+
+            {/* Display calculated points OR "not found" message */}
+            <div style={{ fontSize: '0.9em', paddingLeft: '1rem' }}>
+              {crossoverPoints.length > 0 ? (
+                <strong style={{ color: '#333' }}>
+                  Approx. Price(s): {crossoverPoints.map(p => `$${p.toFixed(2)}`).join(', ')}
+                </strong>
+              ) : (
+                <span style={{ color: '#555' }}>
+                  There are no crossover points found within the current price range.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <PLChart
           portfolio={portfolio}
           currentPrice={currentPrice}
-          rangeStart={priceRange.low}
-          rangeEnd={priceRange.high}
+          rangeStart={chartRangeStart === '' ? 0 : Number(chartRangeStart)}
+          rangeEnd={chartRangeEnd === '' ? (chartRangeStart === '' ? 100 : Number(chartRangeStart) + 100) : Number(chartRangeEnd)}
+          impliedVolatility={ivDecimal}
+          riskFreeRate={rateDecimal}
+          benchmarkQuantity={benchmarkQuantity === '' ? 0 : Number(benchmarkQuantity)}
+          benchmarkCostBasis={benchmarkCostBasis === '' ? 0 : Number(benchmarkCostBasis)}
         />
       </div>
 
@@ -1866,6 +3240,14 @@ function App() {
 
       {/* Display the current positions */}
       <PositionList />
+
+      {/* --- START: Render Modal Conditionally --- */}
+      <HelpModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+      />
+      {/* --- END: Render Modal Conditionally --- */}
+
     </div>
   );
 }
@@ -1873,14 +3255,190 @@ function App() {
 export default App;
 
 
+// ======= File: src\components\HelpModal.css =======
+
+/* ======= File: src/components/HelpModal.css ======= */
+
+.modal-overlay {
+  position: fixed; /* Stay in place */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+  display: flex;
+  align-items: center; /* Vertical center */
+  justify-content: center; /* Horizontal center */
+  z-index: 1000; /* Ensure it's on top */
+  padding: 20px; /* Add padding for smaller screens */
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  position: relative; /* Needed for absolute positioning of close button */
+  max-width: 700px; /* Max width of modal */
+  width: 90%; /* Responsive width */
+  max-height: 85vh; /* Max height */
+  overflow-y: auto; /* Allow vertical scrolling if content overflows */
+  text-align: left; /* Ensure text aligns left */
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+ .modal-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #444;
+ }
+
+.modal-content p,
+.modal-content li {
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: #555;
+}
+
+ .modal-content ul {
+    padding-left: 20px;
+ }
+  .modal-content li {
+    margin-bottom: 0.5rem;
+  }
+
+ .modal-content strong {
+    color: #333;
+ }
+
+ .modal-content section {
+    margin-bottom: 1.5rem;
+ }
+  .modal-content section:last-of-type {
+    margin-bottom: 1rem; /* Less margin on last section before button */
+ }
+
+
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.modal-close-btn:hover {
+  color: #333;
+} 
+
+// ======= File: src\components\HelpModal.tsx =======
+
+import React from 'react';
+import './HelpModal.css'; // We will create this CSS file next
+
+interface HelpModalProps {
+  isOpen: boolean;
+  onClose: () => void; // Function to call when closing the modal
+}
+
+export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+  // Don't render the modal if it's not open
+  if (!isOpen) {
+    return null;
+  }
+
+  // Prevent clicks inside the modal content from closing it
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  return (
+    // Modal Overlay: Covers the screen, clicking closes modal
+    <div className="modal-overlay" onClick={onClose}>
+      {/* Modal Content Box: Centered, click inside doesn't close */}
+      <div className="modal-content" onClick={handleContentClick}>
+        {/* Close Button */}
+        <button className="modal-close-btn" onClick={onClose}>
+          &times; {/* Simple 'X' symbol */}
+        </button>
+
+        {/* --- Explanatory Content --- */}
+        <h2>Understanding the P/L Chart & Concepts</h2>
+
+        <section>
+          <h3>Why This Tool?</h3>
+          <p>
+            Options strategies involving shares, calls, puts, and assignments can be complex. It's often hard to grasp your true Profit/Loss potential or how your active trading compares to simpler strategies like just holding stock. This tool aims to clarify that by visualizing your potential outcomes based on the underlying asset's price. It helps analyze scenarios like covered calls being assigned, using puts to acquire shares, or holding multi-leg option positions.
+          </p>
+        </section>
+
+        <section>
+          <h3>The P/L Chart Lines</h3>
+          <p>The chart shows your entire portfolio's P/L (Y-axis) at different Underlying Prices (X-axis).</p>
+          <ul>
+            <li>
+              <strong>Expiration P/L (Green Line):</strong> Shows your calculated P/L exactly *at the moment the options expire*. It assumes all 'time value' is gone, and options are only worth their *intrinsic value* (how much they are in-the-money). This line often has sharp "kinks" at strike prices and reveals the fundamental payoff structure of your strategy if held to the end.
+            </li>
+            <li>
+              <strong>Theoretical P/L (Purple Line):</strong> Shows your calculated P/L *now* (using today's date, or the date implied by time to expiration), assuming the underlying price instantly changed to the value on the X-axis. It uses the Black-Scholes model, which includes **time value**. Time value is influenced by Time to Expiration, **Implied Volatility (IV)**, and Risk-Free Rate (Rf). Higher IV generally increases time value. As expiration approaches, this line will converge towards the green line (all else being equal). It helps understand the current "mark-to-market" value and sensitivity to IV/time.
+            </li>
+            <li>
+              <strong>Benchmark P/L (Dashed Line):</strong> Shows the P/L of the simple "Buy and Hold" scenario you defined in the Benchmark inputs (e.g., holding 200 shares @ $290). It's a straight line useful for comparing your active strategy's performance against "doing nothing".
+            </li>
+          </ul>
+        </section>
+
+         <section>
+            <h3>Crossover Points</h3>
+            <p>
+                This shows the estimated underlying price(s) where your current strategy's P/L (using the green **Expiration P/L** curve) equals the benchmark P/L. Multiple crossover points are possible because options create non-linear payoff profiles, unlike the linear benchmark. The regions between/outside these points indicate the price ranges where one strategy is calculated to be more profitable than the other *at expiration*.
+            </p>
+         </section>
+
+        <section>
+          <h3>Key Parameters</h3>
+          <ul>
+            <li><strong>Implied Volatility (IV %):</strong> Reflects the market's expectation of *future price swings*. Higher IV means the market expects bigger moves, which increases the theoretical time value of options (making them more expensive to buy / more valuable to sell).</li>
+            <li><strong>Risk-Free Rate (%):</strong> The theoretical return of a zero-risk investment (like government bonds). Used in pricing models for the time value of money and carrying costs. Usually has a much smaller impact on option prices than IV or time remaining.</li>
+          </ul>
+        </section>
+
+        <button onClick={onClose} style={{ marginTop: '1rem' }}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}; 
+
 // ======= File: src\components\OptionForm.tsx =======
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
 
 export const OptionForm: React.FC = () => {
-  const { addOption } = usePortfolio();
+  const {
+    addOption,
+    portfolio,
+    editingPositionId,
+    editingPositionType,
+    updateOption,
+    cancelEditing
+  } = usePortfolio();
+
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [strikePrice, setStrikePrice] = useState<number | ''>('');
@@ -1890,6 +3448,38 @@ export const OptionForm: React.FC = () => {
   const [optionType, setOptionType] = useState<OptionType>('call');
   const [positionType, setPositionType] = useState<PositionType>('short');
 
+  const isEditMode = useMemo(() => {
+    return editingPositionType === 'option' && editingPositionId !== null;
+  }, [editingPositionId, editingPositionType]);
+
+  useEffect(() => {
+    if (isEditMode && editingPositionId) {
+      const optionToEdit = portfolio.options.find(o => o.id === editingPositionId);
+      if (optionToEdit) {
+        setTicker(optionToEdit.ticker);
+        setQuantity(optionToEdit.quantity);
+        setStrikePrice(optionToEdit.strikePrice);
+        setPremium(optionToEdit.premium);
+        setExpirationDate(optionToEdit.expirationDate);
+        setTradeDate(optionToEdit.tradeDate);
+        setOptionType(optionToEdit.optionType);
+        setPositionType(optionToEdit.positionType);
+      } else {
+        console.warn(`Option with ID ${editingPositionId} not found for editing.`);
+        cancelEditing();
+      }
+    } else {
+      setTicker('');
+      setQuantity('');
+      setStrikePrice('');
+      setPremium('');
+      setExpirationDate('');
+      setTradeDate('');
+      setOptionType('call');
+      setPositionType('short');
+    }
+  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!ticker || quantity === '' || strikePrice === '' || premium === '' || !expirationDate || !tradeDate) {
@@ -1897,7 +3487,7 @@ export const OptionForm: React.FC = () => {
       return;
     }
 
-    const newOption: Omit<OptionPosition, 'id'> = {
+    const optionData: Omit<OptionPosition, 'id'> = {
       ticker: ticker.toUpperCase(),
       quantity: Number(quantity),
       strikePrice: Number(strikePrice),
@@ -1908,22 +3498,28 @@ export const OptionForm: React.FC = () => {
       positionType: positionType,
     };
 
-    addOption(newOption);
+    if (isEditMode && editingPositionId) {
+      updateOption(editingPositionId, optionData);
+    } else {
+      addOption(optionData);
+      setTicker('');
+      setQuantity('');
+      setStrikePrice('');
+      setPremium('');
+      setExpirationDate('');
+      setTradeDate('');
+      setOptionType('call');
+      setPositionType('short');
+    }
+  };
 
-    // Reset form
-    setTicker('');
-    setQuantity('');
-    setStrikePrice('');
-    setPremium('');
-    setExpirationDate('');
-    setTradeDate('');
-    setOptionType('call');
-    setPositionType('short');
+  const handleCancel = () => {
+    cancelEditing();
   };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">
-      <h3>Add Option Position</h3>
+      <h3>{isEditMode ? 'Edit Option Position' : 'Add Option Position'}</h3>
       <div className="form-group">
         <label htmlFor="option-ticker">Ticker:</label>
         <input
@@ -1986,18 +3582,22 @@ export const OptionForm: React.FC = () => {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="option-premium">Premium per Contract ($):</label>
+        <label htmlFor="option-premium">
+            TOTAL Premium / Contract ($): {/* Emphasize TOTAL */}
+        </label>
         <input
           id="option-premium"
           type="number"
           value={premium}
           onChange={(e) => setPremium(e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder={positionType === 'short' ? "Premium Received" : "Premium Paid"}
+          placeholder={positionType === 'short' ? "e.g., 800.00 (Total Received)" : "e.g., 1345.00 (Total Paid)"}
           min="0"
           step="0.01"
           required
         />
-        <small>{positionType === 'short' ? 'Enter the total premium received per contract.' : 'Enter the total premium paid per contract.'}</small>
+        <small>
+            Enter the TOTAL dollar amount paid (long) or received (short) for ONE single contract. Example: If the premium was quoted as $13.45 per share, you should enter <strong>1345</strong> here (i.e., $13.45 x 100).
+        </small>
       </div>
       <div className="form-group">
         <label htmlFor="option-trade-date">Trade Date:</label>
@@ -2019,14 +3619,23 @@ export const OptionForm: React.FC = () => {
           required
         />
       </div>
-      <button type="submit">Add Option</button>
+      <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
+        <button type="submit" className="submit-button">
+          {isEditMode ? 'Save Changes' : 'Add Option'}
+        </button>
+        {isEditMode && (
+          <button type="button" onClick={handleCancel} className="cancel-button">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }; 
 
 // ======= File: src\components\PLChart.tsx =======
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -2039,7 +3648,7 @@ import {
   ReferenceLine // To mark current price
 } from 'recharts';
 import { Portfolio } from '../types/portfolio';
-import { generatePLData } from '../utils/calculations';
+import { generatePLData, generateExpirationPLData, generateBenchmarkPLData } from '../utils/calculations';
 
 interface PLChartProps {
   portfolio: Portfolio;
@@ -2047,6 +3656,12 @@ interface PLChartProps {
   rangeStart: number;
   rangeEnd: number;
   steps?: number; // Optional number of steps for data generation
+  impliedVolatility: number; // Expect decimal format from App
+  riskFreeRate: number;      // Expect decimal format from App
+  // --- START: Add Benchmark Props ---
+  benchmarkQuantity: number;
+  benchmarkCostBasis: number;
+  // --- END: Add Benchmark Props ---
 }
 
 export const PLChart: React.FC<PLChartProps> = ({
@@ -2054,26 +3669,65 @@ export const PLChart: React.FC<PLChartProps> = ({
   currentPrice,
   rangeStart,
   rangeEnd,
-  steps = 100 // Increase steps for smoother curve
+  steps = 100,
+  impliedVolatility,
+  riskFreeRate,
+  // --- START: Destructure Benchmark Props ---
+  benchmarkQuantity,
+  benchmarkCostBasis,
+  // --- END: Destructure Benchmark Props ---
 }) => {
   // Optional: Keep logs for now if you want to see data generation
   console.log('[PLChart.tsx] Rendering Recharts component...');
 
-  // Generate the data points for the chart
-  const chartData = React.useMemo(() => {
-    console.log(`[PLChart.tsx] Generating Recharts data with range: ${rangeStart} to ${rangeEnd}`);
+  // Generate the data points for the THEORETICAL chart (existing)
+  const theoreticalChartData = useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Theoretical Recharts data with range: ${rangeStart} to ${rangeEnd}, IV: ${impliedVolatility}, Rate: ${riskFreeRate}`);
     if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
-        console.warn("[PLChart.tsx] Invalid range detected:", rangeStart, rangeEnd);
+        console.warn("[PLChart.tsx] Invalid range detected for theoretical data:", rangeStart, rangeEnd);
         return [];
     }
-    const data = generatePLData(portfolio, rangeStart, rangeEnd, steps);
-    console.log('[PLChart.tsx] Generated Recharts data:', data);
+    const data = generatePLData(portfolio, rangeStart, rangeEnd, steps, new Date(), impliedVolatility, riskFreeRate);
+    console.log('[PLChart.tsx] Generated Theoretical Recharts data:', data);
+    return data;
+  }, [portfolio, rangeStart, rangeEnd, steps, impliedVolatility, riskFreeRate]);
+
+  // --- START: ADD EXPIRATION DATA GENERATION ---
+  // Generate the data points for the EXPIRATION chart
+  const expirationChartData = useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Expiration Recharts data with range: ${rangeStart} to ${rangeEnd}`);
+     if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
+        console.warn("[PLChart.tsx] Invalid range detected for expiration data:", rangeStart, rangeEnd);
+        return [];
+    }
+    // Use the new function for expiration P/L
+    const data = generateExpirationPLData(portfolio, rangeStart, rangeEnd, steps);
+    console.log('[PLChart.tsx] Generated Expiration Recharts data:', data);
     return data;
   }, [portfolio, rangeStart, rangeEnd, steps]);
+  // --- END: ADD EXPIRATION DATA GENERATION ---
 
-  console.log('[PLChart.tsx] Recharts data length:', chartData.length);
+  // --- START: Generate Benchmark Data ---
+  const benchmarkChartData = useMemo(() => {
+    console.log(`[PLChart.tsx] Generating Benchmark data with Qty: ${benchmarkQuantity}, Cost: ${benchmarkCostBasis}`);
+    // Only generate if quantity is greater than 0
+    if (benchmarkQuantity > 0 && benchmarkCostBasis >= 0) {
+        const data = generateBenchmarkPLData(benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps);
+         console.log('[PLChart.tsx] Generated Benchmark data:', data.length);
+        return data;
+    }
+    console.log('[PLChart.tsx] Skipping Benchmark data generation (invalid inputs).');
+    return []; // Return empty array if benchmark not defined
+  }, [benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps]);
+  // --- END: Generate Benchmark Data ---
 
-  if (chartData.length === 0) {
+  console.log('[PLChart.tsx] Theoretical Recharts data length:', theoreticalChartData.length);
+  console.log('[PLChart.tsx] Expiration Recharts data length:', expirationChartData.length); // Log new data length
+
+  // Check if *either* dataset is empty, or maybe base it on theoretical for now
+  const noData = theoreticalChartData.length === 0 && expirationChartData.length === 0 && benchmarkChartData.length === 0;
+
+  if (noData) {
     console.log('[PLChart.tsx] Rendering "Not enough data" message.');
     return <p style={{ textAlign: 'center', margin: '20px' }}>Not enough data to display P/L chart.</p>;
   }
@@ -2081,7 +3735,7 @@ export const PLChart: React.FC<PLChartProps> = ({
   // Format currency for tooltip/axis
   const formatCurrency = (value: number) => `$${value.toFixed(0)}`; // Simple formatting
 
-  // --- ADD LOG FOR REFERENCE LINE CONDITIONS ---
+  // --- (Keep the log for ReferenceLine conditions) ---
   console.log('[PLChart.tsx] Checking ReferenceLine conditions:', {
     currentPrice: currentPrice,
     type: typeof currentPrice,
@@ -2097,54 +3751,96 @@ export const PLChart: React.FC<PLChartProps> = ({
   return (
     <div style={{ width: '100%', height: 400 }}> {/* Define chart container size */}
       <ResponsiveContainer>
+        {/* Use the theoretical data as the primary source for the chart axes if needed, or let Recharts auto-adjust */}
         <LineChart
-          data={chartData}
+          // Consider merging data or letting Recharts handle multiple lines on shared axes
+          // data={theoreticalChartData} // We might remove this if feeding data directly to Lines
           margin={{
             top: 20,
-            right: 30,
+            right: 40, // Increased right margin for labels
             left: 20,
             bottom: 10,
           }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
           <XAxis
-             dataKey="price"
-             type="number"
-             domain={[rangeStart, rangeEnd]}
-             label={{ value: "Underlying Price ($)", position: "insideBottom", dy: 10, fill: '#666' }}
-             tickFormatter={(value) => `$${value}`}
-             stroke="#666"
-           />
+            dataKey="price"
+            type="number"
+            allowDuplicatedCategory={false} // Important when plotting multiple lines with same x-values
+            domain={[rangeStart, rangeEnd]}
+            label={{ value: "Underlying Price ($)", position: "insideBottom", dy: 10, fill: '#666' }}
+            tickFormatter={(value) => `$${value}`}
+            stroke="#666"
+          />
           <YAxis
             tickFormatter={formatCurrency}
             label={{ value: "Profit / Loss ($)", angle: -90, position: "insideLeft", dx: -10, fill: '#666' }}
             stroke="#666"
+            // Allow Recharts to determine the domain based on both datasets
+             domain={['auto', 'auto']}
           />
-          <Tooltip formatter={formatCurrency} labelFormatter={(label) => `Price: $${label.toFixed(2)}`} />
+          {/* Updated Tooltip to potentially show both P/L values if hovered */}
+           <Tooltip
+             formatter={(value, name) => {
+               const formattedValue = formatCurrency(value as number);
+               return [formattedValue, name];
+             }}
+             labelFormatter={(label) => `Price: $${Number(label).toFixed(2)}`}
+           />
           <Legend verticalAlign="top" height={36}/>
 
-          {/* Line representing P/L */}
+          {/* Line representing THEORETICAL P/L (Black-Scholes) */}
           <Line
-             type="monotone"
-             dataKey="pl"
-             name="Portfolio P/L"
-             stroke="#8884d8" // Purple line for P/L
-             strokeWidth={2}
-             dot={false} // Hide dots for smoother line
-           />
+            type="monotone"
+            data={theoreticalChartData} // Feed data directly to the line
+            dataKey="pl"
+            name="Theoretical P/L" // Updated name
+            stroke="#8884d8" // Purple line
+            strokeWidth={2}
+            dot={false}
+          />
 
-           {/* Zero P/L line (breakeven) */}
-           <ReferenceLine y={0} stroke="#a8a8a8" strokeDasharray="4 4" label={{ value: 'Breakeven', position: 'insideTopRight', fill: '#888' }} />
+          {/* --- START: ADD EXPIRATION P/L LINE --- */}
+          {/* Line representing EXPIRATION P/L */}
+          <Line
+            type="monotone"
+            data={expirationChartData} // Feed expiration data to this line
+            dataKey="pl"
+            name="Expiration P/L" // New name
+            stroke="#82ca9d" // Green line for expiration
+            strokeWidth={2}
+            dot={false}
+          />
+          {/* --- END: ADD EXPIRATION P/L LINE --- */}
 
-           {/* Line marking the current price */}
-           {currentPrice !== '' && typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd && (
-             <ReferenceLine
-                x={currentPrice}
-                stroke="green"
-                strokeWidth={2}
-                label={{ value: `Current: $${currentPrice.toFixed(2)}`, position: 'insideTopLeft', fill: 'green' }}
+          {/* --- START: Add Benchmark Line --- */}
+          {/* Only render if data exists */}
+          {benchmarkChartData.length > 0 && (
+              <Line
+                  type="linear" // Benchmark is usually linear
+                  data={benchmarkChartData}
+                  dataKey="pl"
+                  name="Benchmark P/L"
+                  stroke="#555555" // Dark grey color
+                  strokeWidth={1.5} // Slightly thinner?
+                  strokeDasharray="5 5" // Dashed line
+                  dot={false}
               />
-           )}
+          )}
+          {/* --- END: Add Benchmark Line --- */}
+
+          {/* Zero P/L line (breakeven) - remains the same */}
+          <ReferenceLine y={0} stroke="#a8a8a8" strokeDasharray="4 4" label={{ value: 'Breakeven', position: 'insideTopRight', fill: '#888' }} />
+
+          {/* Line marking the current price - remains the same */}
+          {currentPrice !== '' && typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd && (
+            <ReferenceLine
+              x={currentPrice}
+              stroke="orange" // Changed color slightly to contrast with green/purple
+              strokeWidth={2}
+              label={{ value: `Current: $${currentPrice.toFixed(2)}`, position: 'insideTopLeft', fill: 'orange', dy: -5 }} // Adjusted dy
+            />
+          )}
 
         </LineChart>
       </ResponsiveContainer>
@@ -2202,10 +3898,34 @@ export const PLChart: React.FC<PLChartProps> = ({
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  vertical-align: middle;
 }
 
 .remove-btn:hover {
   background-color: #c82333; /* Darker red */
+}
+
+/* Edit button styling */
+.edit-btn {
+  padding: 0.2em 0.5em;
+  font-size: 0.8em;
+  line-height: 1;
+  background-color: #ffc107; /* Yellow/Orange */
+  color: #212529; /* Dark text */
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.edit-btn:hover {
+  background-color: #e0a800; /* Darker yellow/orange */
+}
+
+/* Adjust the cell containing the buttons */
+.position-table td:last-child {
+  white-space: nowrap; /* Prevent buttons from wrapping */
+  width: 1%; /* Prevent the column from taking too much space */
 } 
 
 // ======= File: src\components\PositionList.tsx =======
@@ -2216,19 +3936,54 @@ import { SharePosition, OptionPosition } from '../types/portfolio';
 import './PositionList.css'; // We'll create this CSS file next
 
 // Sub-component to display a single share row
-const ShareRow: React.FC<{ share: SharePosition, onRemove: (id: string) => void }> = ({ share, onRemove }) => (
+const ShareRow: React.FC<{
+  share: SharePosition;
+  onRemove: (id: string) => void;
+  onEdit: (id: string, type: 'share' | 'option') => void;
+  onToggleInclusion: (id: string) => void;
+}> = ({ share, onRemove, onEdit, onToggleInclusion }) => (
   <tr>
+    <td>
+      <input
+        type="checkbox"
+        checked={share.isIncludedInAnalysis !== false}
+        onChange={() => onToggleInclusion(share.id)}
+        title={share.isIncludedInAnalysis !== false ? "Exclude from analysis" : "Include in analysis"}
+      />
+    </td>
     <td>{share.ticker.toUpperCase()}</td>
     <td>{share.quantity}</td>
     <td>${share.costBasisPerShare.toFixed(2)}</td>
     <td>{share.purchaseDate}</td>
-    <td><button onClick={() => onRemove(share.id)} className="remove-btn">X</button></td>
+    <td>
+      <button
+        onClick={() => onEdit(share.id, 'share')}
+        className="edit-btn"
+        style={{ marginRight: '5px' }}
+      >
+        Edit
+      </button>
+      <button onClick={() => onRemove(share.id)} className="remove-btn">X</button>
+    </td>
   </tr>
 );
 
 // Sub-component to display a single option row
-const OptionRow: React.FC<{ option: OptionPosition, onRemove: (id: string) => void }> = ({ option, onRemove }) => (
+const OptionRow: React.FC<{
+  option: OptionPosition;
+  onRemove: (id: string) => void;
+  onEdit: (id: string, type: 'share' | 'option') => void;
+  onToggleInclusion: (id: string) => void;
+}> = ({ option, onRemove, onEdit, onToggleInclusion }) => (
   <tr>
+    <td>
+      <input
+        type="checkbox"
+        checked={option.isIncludedInAnalysis !== false}
+        onChange={() => onToggleInclusion(option.id)}
+        title={option.isIncludedInAnalysis !== false ? "Exclude from analysis" : "Include in analysis"}
+      />
+    </td>
     <td>{option.ticker.toUpperCase()}</td>
     <td>{option.quantity}</td>
     <td>{option.optionType.toUpperCase()}</td>
@@ -2237,13 +3992,29 @@ const OptionRow: React.FC<{ option: OptionPosition, onRemove: (id: string) => vo
     <td>${option.premium.toFixed(2)}</td>
     <td>{option.tradeDate}</td>
     <td>{option.expirationDate}</td>
-    <td><button onClick={() => onRemove(option.id)} className="remove-btn">X</button></td>
+    <td>
+      <button
+        onClick={() => onEdit(option.id, 'option')}
+        className="edit-btn"
+        style={{ marginRight: '5px' }}
+      >
+        Edit
+      </button>
+      <button onClick={() => onRemove(option.id)} className="remove-btn">X</button>
+    </td>
   </tr>
 );
 
 // Main component to display both lists
 export const PositionList: React.FC = () => {
-  const { portfolio, removeShare, removeOption } = usePortfolio();
+  const { 
+    portfolio, 
+    removeShare, 
+    removeOption, 
+    startEditing,
+    toggleShareInclusion,
+    toggleOptionInclusion 
+  } = usePortfolio();
 
   return (
     <div className="position-list-container">
@@ -2252,16 +4023,23 @@ export const PositionList: React.FC = () => {
         <table className="position-table">
           <thead>
             <tr>
+              <th title="Include in P/L calculations and chart?">Inc.</th>
               <th>Ticker</th>
               <th>Quantity</th>
               <th>Cost/Share</th>
               <th>Purchase Date</th>
-              <th>Remove</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {portfolio.shares.map((share) => (
-              <ShareRow key={share.id} share={share} onRemove={removeShare} />
+              <ShareRow
+                key={share.id}
+                share={share}
+                onRemove={removeShare}
+                onEdit={startEditing}
+                onToggleInclusion={toggleShareInclusion}
+              />
             ))}
           </tbody>
         </table>
@@ -2274,6 +4052,7 @@ export const PositionList: React.FC = () => {
         <table className="position-table">
           <thead>
             <tr>
+              <th title="Include in P/L calculations and chart?">Inc.</th>
               <th>Ticker</th>
               <th>Contracts</th>
               <th>Type</th>
@@ -2282,12 +4061,18 @@ export const PositionList: React.FC = () => {
               <th>Premium</th>
               <th>Trade Date</th>
               <th>Expiration</th>
-              <th>Remove</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {portfolio.options.map((option) => (
-              <OptionRow key={option.id} option={option} onRemove={removeOption} />
+              <OptionRow
+                key={option.id}
+                option={option}
+                onRemove={removeOption}
+                onEdit={startEditing}
+                onToggleInclusion={toggleOptionInclusion}
+              />
             ))}
           </tbody>
         </table>
@@ -2300,16 +4085,48 @@ export const PositionList: React.FC = () => {
 
 // ======= File: src\components\ShareForm.tsx =======
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { SharePosition } from '../types/portfolio';
 
 export const ShareForm: React.FC = () => {
-  const { addShare } = usePortfolio();
+  const {
+    addShare,
+    portfolio,
+    editingPositionId,
+    editingPositionType,
+    updateShare,
+    cancelEditing
+  } = usePortfolio();
+
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [costBasisPerShare, setCostBasisPerShare] = useState<number | ''>('');
   const [purchaseDate, setPurchaseDate] = useState('');
+
+  const isEditMode = useMemo(() => {
+    return editingPositionType === 'share' && editingPositionId !== null;
+  }, [editingPositionId, editingPositionType]);
+
+  useEffect(() => {
+    if (isEditMode && editingPositionId) {
+      const shareToEdit = portfolio.shares.find(s => s.id === editingPositionId);
+      if (shareToEdit) {
+        setTicker(shareToEdit.ticker);
+        setQuantity(shareToEdit.quantity);
+        setCostBasisPerShare(shareToEdit.costBasisPerShare);
+        setPurchaseDate(shareToEdit.purchaseDate);
+      } else {
+        console.warn(`Share with ID ${editingPositionId} not found for editing.`);
+        cancelEditing();
+      }
+    } else {
+      setTicker('');
+      setQuantity('');
+      setCostBasisPerShare('');
+      setPurchaseDate('');
+    }
+  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -2318,25 +4135,31 @@ export const ShareForm: React.FC = () => {
       return;
     }
 
-    const newShare: Omit<SharePosition, 'id'> = {
+    const shareData: Omit<SharePosition, 'id'> = {
       ticker: ticker.toUpperCase(),
       quantity: Number(quantity),
       costBasisPerShare: Number(costBasisPerShare),
       purchaseDate: purchaseDate,
     };
 
-    addShare(newShare);
+    if (isEditMode && editingPositionId) {
+      updateShare(editingPositionId, shareData);
+    } else {
+      addShare(shareData);
+      setTicker('');
+      setQuantity('');
+      setCostBasisPerShare('');
+      setPurchaseDate('');
+    }
+  };
 
-    // Reset form
-    setTicker('');
-    setQuantity('');
-    setCostBasisPerShare('');
-    setPurchaseDate('');
+  const handleCancel = () => {
+    cancelEditing();
   };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">
-      <h3>Add Share Position</h3>
+      <h3>{isEditMode ? 'Edit Share Position' : 'Add Share Position'}</h3>
       <div className="form-group">
         <label htmlFor="share-ticker">Ticker:</label>
         <input
@@ -2355,8 +4178,8 @@ export const ShareForm: React.FC = () => {
           type="number"
           value={quantity}
           onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder="Enter quantity"
-          min="1"
+          placeholder="e.g., 10.5"
+          step="any"
           required
         />
       </div>
@@ -2383,9 +4206,16 @@ export const ShareForm: React.FC = () => {
           required
         />
       </div>
-      <button type="submit" className="submit-button">
-        Add Share Position
-      </button>
+      <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
+        <button type="submit" className="submit-button">
+          {isEditMode ? 'Save Changes' : 'Add Share Position'}
+        </button>
+        {isEditMode && (
+          <button type="button" onClick={handleCancel} className="cancel-button">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }; 
@@ -2409,8 +4239,17 @@ interface PortfolioContextType {
   addOption: (option: Omit<OptionPosition, 'id'>) => void;
   removeShare: (id: string) => void;
   removeOption: (id: string) => void;
-  // We can add update functions later
-  loadPortfolio: (loadedPortfolio: Portfolio) => void; // Function to load data (e.g., from file)
+  loadPortfolio: (loadedPortfolio: Portfolio) => void;
+  // --- START: Add Editing State and Functions ---
+  editingPositionId: string | null; // ID of the item being edited
+  editingPositionType: 'share' | 'option' | null; // Type of item being edited
+  startEditing: (id: string, type: 'share' | 'option') => void; // Function to begin editing
+  cancelEditing: () => void; // Function to stop editing
+  updateShare: (id: string, updatedShareData: Omit<SharePosition, 'id'>) => void;
+  updateOption: (id: string, updatedOptionData: Omit<OptionPosition, 'id'>) => void;
+  toggleShareInclusion: (id: string) => void;
+  toggleOptionInclusion: (id: string) => void;
+  // --- END: Add Editing State and Functions ---
 }
 
 // Create the context with an undefined initial value
@@ -2447,6 +4286,11 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     }
   });
 
+  // --- START: Add Editing State Variables ---
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [editingPositionType, setEditingPositionType] = useState<'share' | 'option' | null>(null);
+  // --- END: Add Editing State Variables ---
+
   // Save portfolio to local storage whenever it changes
   useEffect(() => {
     try {
@@ -2461,6 +4305,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     const newShare: SharePosition = {
       ...shareData,
       id: `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      isIncludedInAnalysis: true, // Initialize flag on add
     };
     setPortfolio((prev) => ({
       ...prev,
@@ -2473,6 +4318,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     const newOption: OptionPosition = {
       ...optionData,
       id: `option_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      isIncludedInAnalysis: true, // Initialize flag on add
     };
     setPortfolio((prev) => ({
       ...prev,
@@ -2503,6 +4349,65 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     setPortfolio(loadedPortfolio);
   }, []);
 
+  // --- START: Add Update Functions ---
+  const updateShare = useCallback((id: string, updatedShareData: Omit<SharePosition, 'id'>) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.map((share) =>
+        share.id === id ? { ...updatedShareData, id } : share
+      ),
+    }));
+    setEditingPositionId(null); // Stop editing after update
+    setEditingPositionType(null);
+  }, []);
+
+  const updateOption = useCallback((id: string, updatedOptionData: Omit<OptionPosition, 'id'>) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.map((option) =>
+        option.id === id ? { ...updatedOptionData, id } : option
+      ),
+    }));
+    setEditingPositionId(null); // Stop editing after update
+    setEditingPositionType(null);
+  }, []);
+  // --- END: Add Update Functions ---
+
+  // --- START: Add Editing Control Functions ---
+  const startEditing = useCallback((id: string, type: 'share' | 'option') => {
+    setEditingPositionId(id);
+    setEditingPositionType(type);
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingPositionId(null);
+    setEditingPositionType(null);
+  }, []);
+  // --- END: Add Editing Control Functions ---
+
+  // Toggle functions for inclusion in analysis
+  const toggleShareInclusion = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      shares: prev.shares.map((share) =>
+        share.id === id
+          ? { ...share, isIncludedInAnalysis: !(share.isIncludedInAnalysis ?? true) }
+          : share
+      ),
+    }));
+  }, []);
+
+  const toggleOptionInclusion = useCallback((id: string) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      options: prev.options.map((option) =>
+        option.id === id
+          ? { ...option, isIncludedInAnalysis: !(option.isIncludedInAnalysis ?? true) }
+          : option
+      ),
+    }));
+  }, []);
+
   // Value provided by the context
   const contextValue: PortfolioContextType = {
     portfolio,
@@ -2511,6 +4416,16 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     removeShare,
     removeOption,
     loadPortfolio,
+    // --- START: Provide editing state and functions ---
+    editingPositionId,
+    editingPositionType,
+    startEditing,
+    cancelEditing,
+    updateShare,
+    updateOption,
+    toggleShareInclusion,
+    toggleOptionInclusion,
+    // --- END: Provide editing state and functions ---
   };
 
   return (
@@ -2686,27 +4601,36 @@ createRoot(document.getElementById('root')!).render(
 )
 
 
-// ======= File: src\types\js-quantities.d.ts =======
+// ======= File: src\types\black-scholes-js.d.ts =======
 
-declare module 'js-quantities' {
-    class Qty {
-        constructor(value: number, unit?: string);
-        static BlackScholes(
-            type: 'call' | 'put',
-            spot: number,
-            strike: number,
-            expiry: number,
-            rate: number,
-            vol: number
-        ): Qty;
-        scalar: number;
+declare module 'black-scholes-js' {
+    export class BlackScholes {
+        constructor(stock: string, strike: number, time: number, riskFree: number, deviation: number, type: 'call' | 'put');
+        calculate(): number;
     }
-    export default Qty;
-}
+} 
 
-declare module 'js-quantities/esm/extras/finance' {
-    // This module is imported for its side effects (adding finance-related functionality to Qty)
-    // No exports are needed
+// ======= File: src\types\black-scholes.d.ts =======
+
+declare module 'black-scholes' {
+    /**
+     * Calculates the Black-Scholes option price
+     * @param stockPrice - Current stock price
+     * @param strikePrice - Strike price
+     * @param timeToExpiration - Time to expiration in years
+     * @param volatility - Volatility (decimal, e.g., 0.30 for 30%)
+     * @param riskFreeRate - Risk-free rate (decimal, e.g., 0.04 for 4%)
+     * @param isCall - true for call option, false for put option
+     * @returns The theoretical option price
+     */
+    export function blackScholes(
+        stockPrice: number,
+        strikePrice: number,
+        timeToExpiration: number,
+        volatility: number,
+        riskFreeRate: number,
+        isCall: boolean
+    ): number;
 } 
 
 // ======= File: src\types\portfolio.ts =======
@@ -2727,6 +4651,7 @@ interface BasePosition {
 export interface SharePosition extends BasePosition {
   costBasisPerShare: number; // Price paid per share
   purchaseDate: string; // Date purchased (ISO 8601 format: "YYYY-MM-DD")
+  isIncludedInAnalysis?: boolean; // Defaults to true if undefined
 }
 
 // Interface for holding options
@@ -2737,6 +4662,7 @@ export interface OptionPosition extends BasePosition {
   premium: number; // Premium received (for short) or paid (for long) per contract
   expirationDate: string; // Expiration date (ISO 8601 format: "YYYY-MM-DD")
   tradeDate: string; // Date the option was bought/sold (ISO 8601 format: "YYYY-MM-DD")
+  isIncludedInAnalysis?: boolean; // Defaults to true if undefined
   // Note: 'quantity' represents the number of contracts (each typically controls 100 shares)
 }
 
@@ -2759,9 +4685,8 @@ export interface AssignmentEvent {
 
 // src/utils/calculations.ts
 
-import { Portfolio, SharePosition, OptionPosition, OptionType } from '../types/portfolio';
-// Import the main constructor only
-import Qty from 'js-quantities';
+import { BlackScholes } from 'black-scholes-js';
+import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
 
 // --- Constants and Defaults ---
 const DEFAULT_IMPLIED_VOLATILITY = 0.30; // 30% default IV
@@ -2802,7 +4727,7 @@ function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date
  * @returns The total value of the shares.
  */
 export function calculateShareValue(share: SharePosition, underlyingPrice: number): number {
-  if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+  if (isNaN(underlyingPrice) || underlyingPrice < 0 || share.isIncludedInAnalysis === false) return 0;
   return share.quantity * underlyingPrice;
 }
 
@@ -2842,34 +4767,27 @@ export function calculateOptionTheoreticalValue(
     }
 
     try {
-        // Use the js-quantities Black-Scholes function
-        // Qty.BlackScholes(type, spot, strike, expiry, rate, vol)
-        // Note: expiry is in years
-        const theoreticalValuePerShare = Qty.BlackScholes(
-            optionType,         // 'call' or 'put'
-            underlyingPrice,    // spot
-            strikePrice,        // strike
-            timeToExpirationYears, // expiry (in years)
-            riskFreeRate,       // rate
-            impliedVolatility   // vol
+        const bs = new BlackScholes(
+            underlyingPrice.toString(), // stock price as string
+            strikePrice,                // strike price
+            timeToExpirationYears,      // time to expiry in years
+            riskFreeRate,               // risk-free rate
+            impliedVolatility,          // volatility
+            optionType                  // 'call' or 'put'
         );
+        const theoreticalValuePerShare = bs.calculate();
 
-        // js-quantities returns a Qty object, we need the scalar value
-        const valueScalar = theoreticalValuePerShare.scalar;
-
-        if (isNaN(valueScalar) || typeof valueScalar !== 'number') {
-             console.warn("js-quantities returned invalid value for option:", option, { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", valueScalar);
-             return 0;
+        if (isNaN(theoreticalValuePerShare) || typeof theoreticalValuePerShare !== 'number') {
+            console.warn("black-scholes-js returned invalid value:", { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", theoreticalValuePerShare);
+            return 0;
         }
 
-        const totalValue = valueScalar * quantity * 100; // x100 shares per contract
-
+        const totalValue = theoreticalValuePerShare * quantity * 100;
         return positionType === 'long' ? totalValue : -totalValue;
 
     } catch (error) {
-        console.error("Error in js-quantities BS calculation for option:", option, error);
-        // Add more details about the inputs if possible
-        console.error("Inputs:", {optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility});
+        console.error("Error in black-scholes-js calculation:", option, error);
+        console.error("Inputs:", { optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility });
         return 0;
     }
 }
@@ -2885,16 +4803,20 @@ export function calculateTotalCostBasis(portfolio: Portfolio): number {
 
   // Add cost of shares
   portfolio.shares.forEach(share => {
-    totalCost += share.quantity * share.costBasisPerShare;
+    if (share.isIncludedInAnalysis !== false) {
+      totalCost += share.quantity * share.costBasisPerShare;
+    }
   });
 
   // Add/Subtract cost/premium of options
   portfolio.options.forEach(option => {
-    const premiumEffect = option.premium * option.quantity * 100; // x100 shares per contract
-    if (option.positionType === 'long') {
-      totalCost += premiumEffect; // Paid premium increases cost basis
-    } else { // short
-      totalCost -= premiumEffect; // Received premium decreases cost basis
+    if (option.isIncludedInAnalysis !== false) {
+      const premiumEffect = option.premium * option.quantity; // Premium is per contract
+      if (option.positionType === 'long') {
+        totalCost += premiumEffect; // Paid premium increases cost basis
+      } else { // short
+        totalCost -= premiumEffect; // Received premium decreases cost basis
+      }
     }
   });
 
@@ -2923,12 +4845,16 @@ export function calculatePortfolioTheoreticalValue(
     let totalValue = 0;
 
     portfolio.shares.forEach(share => {
+      if (share.isIncludedInAnalysis !== false) {
         totalValue += calculateShareValue(share, underlyingPrice);
+      }
     });
 
     portfolio.options.forEach(option => {
+      if (option.isIncludedInAnalysis !== false) {
         // Pass IV and Rate to the option calculation
         totalValue += calculateOptionTheoreticalValue(option, underlyingPrice, currentDate, iv, rate);
+      }
     });
 
     return totalValue;
@@ -2951,13 +4877,29 @@ export function calculatePortfolioPL(
     iv: number = DEFAULT_IMPLIED_VOLATILITY,
     rate: number = DEFAULT_RISK_FREE_RATE
 ): number {
-    if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
+    if (isNaN(underlyingPrice) || underlyingPrice < 0) {
+         console.log(`CalcPL: Skipped due to invalid price ${underlyingPrice}`);
+         return 0;
+    }
 
-    // Use the theoretical value calculation now
+    // These are the two critical intermediate values:
     const currentTotalValue = calculatePortfolioTheoreticalValue(portfolio, underlyingPrice, currentDate, iv, rate);
     const totalCostBasis = calculateTotalCostBasis(portfolio);
+    const finalPL = currentTotalValue - totalCostBasis;
 
-    return currentTotalValue - totalCostBasis;
+    // --- START: Add Detailed Logging for Debugging ---
+    // Log only for prices below 200 to reduce console spam
+    if (underlyingPrice < 200) {
+         console.log(`--- CalcPL @ Price: ${underlyingPrice.toFixed(2)} ---`);
+         console.log(`   Total Theoretical Value: ${currentTotalValue.toFixed(2)}`);
+         console.log(`   Total Cost Basis: ${totalCostBasis.toFixed(2)}`);
+         console.log(`   Resulting P/L: ${finalPL.toFixed(2)}`);
+         // Optional: Log portfolio state used (might be too verbose)
+         // console.log(`   Portfolio used:`, JSON.stringify(portfolio));
+    }
+    // --- END: Add Detailed Logging ---
+
+    return finalPL; // Return the calculated P/L
 }
 
 /**
@@ -2996,6 +4938,214 @@ export function generatePLData(
     }
   }
   return data;
+}
+
+/**
+ * Calculates the value of a single option position AT EXPIRATION based on intrinsic value.
+ * @param option - The option position object.
+ * @param underlyingPriceAtExpiration - The price of the underlying stock at expiration.
+ * @returns The total intrinsic value of the option position at expiration (positive for long, negative for short).
+ */
+export function calculateOptionValueAtExpiration(
+  option: OptionPosition,
+  underlyingPriceAtExpiration: number
+): number {
+  if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0 || option.isIncludedInAnalysis === false) return 0;
+
+  const { strikePrice, optionType, positionType, quantity } = option;
+  let intrinsicValuePerShare = 0;
+
+  if (optionType === 'call') {
+    intrinsicValuePerShare = Math.max(0, underlyingPriceAtExpiration - strikePrice);
+  } else { // put
+    intrinsicValuePerShare = Math.max(0, strikePrice - underlyingPriceAtExpiration);
+  }
+
+  const totalIntrinsicValue = intrinsicValuePerShare * quantity * 100; // x100 shares per contract
+  return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
+}
+
+/**
+ * Calculates the total portfolio value AT EXPIRATION.
+ * @param portfolio - The portfolio object.
+ * @param underlyingPriceAtExpiration - The price of the underlying stock at expiration.
+ * @returns The total portfolio value at expiration.
+ */
+export function calculatePortfolioPLAtExpiration(
+  portfolio: Portfolio,
+  underlyingPriceAtExpiration: number
+): number {
+  if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0) return 0;
+
+  let totalValue = 0;
+
+  // Add value of shares
+  portfolio.shares.forEach(share => {
+    if (share.isIncludedInAnalysis !== false) {
+      totalValue += calculateShareValue(share, underlyingPriceAtExpiration);
+    }
+  });
+
+  // Add value of options (intrinsic value only at expiration)
+  portfolio.options.forEach(option => {
+    if (option.isIncludedInAnalysis !== false) {
+      totalValue += calculateOptionValueAtExpiration(option, underlyingPriceAtExpiration);
+    }
+  });
+
+  const totalCostBasis = calculateTotalCostBasis(portfolio);
+  return totalValue - totalCostBasis;
+}
+
+/**
+ * Generates an array of {price, pl} points for creating an EXPIRATION P/L graph.
+ *
+ * @param portfolio - The portfolio object.
+ * @param rangeStart - The starting underlying price for the range.
+ * @param rangeEnd - The ending underlying price for the range.
+ * @param steps - The number of price points to calculate within the range.
+ * @returns An array of objects { price: number, pl: number }.
+ */
+export function generateExpirationPLData(
+  portfolio: Portfolio,
+  rangeStart: number,
+  rangeEnd: number,
+  steps: number = 50
+): { price: number, pl: number }[] {
+  const data: { price: number, pl: number }[] = [];
+  if (rangeStart >= rangeEnd || steps <= 0) return data;
+
+  const stepSize = (rangeEnd - rangeStart) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const price = rangeStart + (i * stepSize);
+    // Use the specific expiration P/L calculation
+    const pl = calculatePortfolioPLAtExpiration(portfolio, price);
+    if (isNaN(pl)) {
+       console.warn(`generateExpirationPLData: NaN P/L calculated for price ${price}`);
+    } else {
+       data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
+    }
+  }
+  return data;
+}
+
+// --- START: Add Benchmark Calculation Functions ---
+
+/**
+ * Calculates the Profit/Loss for a simple Buy & Hold benchmark strategy.
+ * @param quantity - Number of shares held in the benchmark.
+ * @param costBasisPerShare - The average cost per share for the benchmark holding.
+ * @param underlyingPrice - The current or projected price of the underlying.
+ * @returns The total P/L of the benchmark position.
+ */
+export function calculateBenchmarkPL(
+  quantity: number,
+  costBasisPerShare: number,
+  underlyingPrice: number
+): number {
+  if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || isNaN(underlyingPrice)) {
+    return 0; // Return 0 if inputs are invalid or quantity is zero
+  }
+  const currentValue = quantity * underlyingPrice;
+  const initialCost = quantity * costBasisPerShare;
+  return currentValue - initialCost;
+}
+
+/**
+ * Generates an array of {price, pl} points for a Buy & Hold benchmark P/L graph.
+ * @param quantity - Number of shares held in the benchmark.
+ * @param costBasisPerShare - The average cost per share for the benchmark holding.
+ * @param rangeStart - The starting underlying price for the range.
+ * @param rangeEnd - The ending underlying price for the range.
+ * @param steps - The number of price points to calculate within the range.
+ * @returns An array of objects { price: number, pl: number }.
+ */
+export function generateBenchmarkPLData(
+  quantity: number,
+  costBasisPerShare: number,
+  rangeStart: number,
+  rangeEnd: number,
+  steps: number = 50
+): { price: number, pl: number }[] {
+  const data: { price: number, pl: number }[] = [];
+  // Only generate data if quantity and cost basis are valid positive numbers
+  if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || costBasisPerShare < 0 || rangeStart >= rangeEnd || steps <= 0) {
+       return data; // Return empty array if benchmark isn't properly defined or range is invalid
+  }
+
+  const stepSize = (rangeEnd - rangeStart) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const price = rangeStart + (i * stepSize);
+    const pl = calculateBenchmarkPL(quantity, costBasisPerShare, price);
+    // Benchmark P/L should not be NaN if inputs are valid numbers
+    data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
+  }
+  return data;
+}
+// --- END: Add Benchmark Calculation Functions --- 
+
+/**
+ * Finds approximate underlying price points where the portfolio's expiration P/L
+ * crosses over the benchmark P/L.
+ *
+ * @param portfolio - The current portfolio.
+ * @param benchmarkQuantity - Number of shares in the benchmark.
+ * @param benchmarkCostBasis - Cost basis per share for the benchmark.
+ * @param rangeStart - The starting price for analysis (should match chart).
+ * @param rangeEnd - The ending price for analysis (should match chart).
+ * @param steps - The number of steps for analysis (should match chart).
+ * @returns An array of approximate crossover prices. Returns empty array if none found or invalid inputs.
+ */
+export function findCrossoverPoints(
+    portfolio: Portfolio,
+    benchmarkQuantity: number,
+    benchmarkCostBasis: number,
+    rangeStart: number,
+    rangeEnd: number,
+    steps: number = 100 // Use a reasonable number of steps, matching chart is good
+): number[] {
+    const crossovers: number[] = [];
+
+    // Ensure valid benchmark parameters and range
+    if (benchmarkQuantity <= 0 || benchmarkCostBasis < 0 || rangeStart >= rangeEnd || steps <= 0) {
+        return crossovers; // Cannot calculate crossovers without a valid benchmark/range
+    }
+
+    // Generate the data points for both curves
+    // Use a higher number of steps for potentially better accuracy if desired
+    const expirationData = generateExpirationPLData(portfolio, rangeStart, rangeEnd, steps);
+    const benchmarkData = generateBenchmarkPLData(benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps);
+
+    // Ensure data was generated and arrays match length (they should if ranges/steps are same)
+    if (expirationData.length === 0 || benchmarkData.length === 0 || expirationData.length !== benchmarkData.length) {
+        console.warn("Crossover calc: Data generation failed or lengths mismatch.");
+        return crossovers;
+    }
+
+    // Iterate through the data points, looking for sign changes in the difference
+    let prevDiff = expirationData[0].pl - benchmarkData[0].pl;
+
+    for (let i = 1; i < expirationData.length; i++) {
+        const currentDiff = expirationData[i].pl - benchmarkData[i].pl;
+
+        // Check if the difference crossed zero (sign change)
+        // (prevDiff < 0 && currentDiff >= 0) -> Crossed from below
+        // (prevDiff > 0 && currentDiff <= 0) -> Crossed from above
+        if ((prevDiff < 0 && currentDiff >= 0) || (prevDiff > 0 && currentDiff <= 0)) {
+            // We found a crossover between point i-1 and i.
+            // For simplicity, we can take the price at point i as the approximate crossover.
+            // More advanced: Interpolate between price i-1 and i based on P/L values.
+            crossovers.push(expirationData[i].price);
+        }
+
+        // Don't update prevDiff if currentDiff is exactly 0 to catch subsequent crossings
+        if (currentDiff !== 0) {
+             prevDiff = currentDiff;
+        }
+    }
+
+    console.log("[Calculations] Found Crossover Points:", crossovers);
+    return crossovers;
 } 
 
 // ======= File: src\vite-env.d.ts =======
@@ -3080,7 +5230,4 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ['js-quantities'],
-  },
 })

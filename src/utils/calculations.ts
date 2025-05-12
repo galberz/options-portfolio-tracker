@@ -1,6 +1,6 @@
 // src/utils/calculations.ts
 
-import { blackScholes } from 'black-scholes';
+import { BlackScholes } from 'black-scholes-js';
 import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
 
 // --- Constants and Defaults ---
@@ -82,26 +82,26 @@ export function calculateOptionTheoreticalValue(
     }
 
     try {
-        const theoreticalValuePerShare = blackScholes(
-            underlyingPrice,       // stock price
-            strikePrice,           // strike price
-            timeToExpirationYears, // time to expiry in years
-            impliedVolatility,     // volatility (e.g., 0.30 for 30%)
-            riskFreeRate,          // risk-free rate (e.g., 0.04 for 4%)
-            optionType === 'call'  // isCall (true for call, false for put)
+        const bs = new BlackScholes(
+            underlyingPrice.toString(), // stock price as string
+            strikePrice,                // strike price
+            timeToExpirationYears,      // time to expiry in years
+            riskFreeRate,               // risk-free rate
+            impliedVolatility,          // volatility
+            optionType                  // 'call' or 'put'
         );
+        const theoreticalValuePerShare = bs.calculate();
 
         if (isNaN(theoreticalValuePerShare) || typeof theoreticalValuePerShare !== 'number') {
-             console.warn("black-scholes returned invalid value for option:", option, { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", theoreticalValuePerShare);
+            console.warn("black-scholes-js returned invalid value:", { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", theoreticalValuePerShare);
             return 0;
         }
 
-        const totalValue = theoreticalValuePerShare * quantity * 100; // x100 shares per contract
-
+        const totalValue = theoreticalValuePerShare * quantity * 100;
         return positionType === 'long' ? totalValue : -totalValue;
 
     } catch (error) {
-        console.error("Error in black-scholes calculation for option:", option, error);
+        console.error("Error in black-scholes-js calculation:", option, error);
         console.error("Inputs:", { optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility });
         return 0;
     }
