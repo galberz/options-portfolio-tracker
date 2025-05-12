@@ -1,16 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { SharePosition } from '../types/portfolio';
+import { TransactionType, ShareTransaction } from '../types/transactions';
 
 export const ShareForm: React.FC = () => {
-  const {
-    addShare,
-    portfolio,
-    editingPositionId,
-    editingPositionType,
-    updateShare,
-    cancelEditing
-  } = usePortfolio();
+  const { addTransaction } = usePortfolio();
 
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
@@ -18,28 +11,13 @@ export const ShareForm: React.FC = () => {
   const [purchaseDate, setPurchaseDate] = useState('');
 
   const isEditMode = useMemo(() => {
-    return editingPositionType === 'share' && editingPositionId !== null;
-  }, [editingPositionId, editingPositionType]);
+    return false;
+  }, []);
 
   useEffect(() => {
-    if (isEditMode && editingPositionId) {
-      const shareToEdit = portfolio.shares.find(s => s.id === editingPositionId);
-      if (shareToEdit) {
-        setTicker(shareToEdit.ticker);
-        setQuantity(shareToEdit.quantity);
-        setCostBasisPerShare(shareToEdit.costBasisPerShare);
-        setPurchaseDate(shareToEdit.purchaseDate);
-      } else {
-        console.warn(`Share with ID ${editingPositionId} not found for editing.`);
-        cancelEditing();
-      }
-    } else {
-      setTicker('');
-      setQuantity('');
-      setCostBasisPerShare('');
-      setPurchaseDate('');
-    }
-  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
+    // Effect previously handled populating form for editing, now disabled.
+    // Clear the effect or leave it empty.
+  }, []);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -48,31 +26,30 @@ export const ShareForm: React.FC = () => {
       return;
     }
 
-    const shareData: Omit<SharePosition, 'id'> = {
+    const transactionData: Omit<ShareTransaction, 'id'> = {
       ticker: ticker.toUpperCase(),
+      transactionType: TransactionType.BUY_SHARE,
+      date: purchaseDate,
       quantity: Number(quantity),
-      costBasisPerShare: Number(costBasisPerShare),
-      purchaseDate: purchaseDate,
+      pricePerShare: Number(costBasisPerShare),
+      commission: 0,
     };
 
-    if (isEditMode && editingPositionId) {
-      updateShare(editingPositionId, shareData);
-    } else {
-      addShare(shareData);
-      setTicker('');
-      setQuantity('');
-      setCostBasisPerShare('');
-      setPurchaseDate('');
-    }
+    addTransaction(transactionData);
+    setTicker('');
+    setQuantity('');
+    setCostBasisPerShare('');
+    setPurchaseDate('');
   };
 
   const handleCancel = () => {
-    cancelEditing();
+    // Remove cancelEditing call since it's no longer available
+    // This function can be removed entirely if not needed
   };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">
-      <h3>{isEditMode ? 'Edit Share Position' : 'Add Share Position'}</h3>
+      <h3>Add Share Purchase</h3>
       <div className="form-group">
         <label htmlFor="share-ticker">Ticker:</label>
         <input
@@ -97,7 +74,7 @@ export const ShareForm: React.FC = () => {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="share-cost-basis">Cost Basis per Share:</label>
+        <label htmlFor="share-cost-basis">Purchase Price per Share ($):</label>
         <input
           id="share-cost-basis"
           type="number"
@@ -110,7 +87,7 @@ export const ShareForm: React.FC = () => {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="share-purchase-date">Purchase Date:</label>
+        <label htmlFor="share-purchase-date">Transaction Date:</label>
         <input
           id="share-purchase-date"
           type="date"
@@ -121,13 +98,8 @@ export const ShareForm: React.FC = () => {
       </div>
       <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
         <button type="submit" className="submit-button">
-          {isEditMode ? 'Save Changes' : 'Add Share Position'}
+          Add Purchase Transaction
         </button>
-        {isEditMode && (
-          <button type="button" onClick={handleCancel} className="cancel-button">
-            Cancel
-          </button>
-        )}
       </div>
     </form>
   );

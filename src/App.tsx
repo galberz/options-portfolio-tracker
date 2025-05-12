@@ -8,13 +8,14 @@ import { calculatePortfolioPL, findCrossoverPoints } from './utils/calculations'
 import { HelpModal } from './components/HelpModal';
 import './App.css';
 import './components/HelpModal.css';
+import { OptionPosition, SharePosition, Portfolio } from './types/portfolio';
 
 // --- Constants ---
 const DEFAULT_IV_PERCENT = 30;
 const DEFAULT_RATE_PERCENT = 4;
 
 function App() {
-  const { portfolio } = usePortfolio();
+  const { processedPortfolio } = usePortfolio();
   const [currentPrice, setCurrentPrice] = useState<number | ''>('');
   const [impliedVolatility, setImpliedVolatility] = useState<number | ''>(DEFAULT_IV_PERCENT);
   const [riskFreeRate, setRiskFreeRate] = useState<number | ''>(DEFAULT_RATE_PERCENT);
@@ -39,18 +40,21 @@ function App() {
      let maxStrike = -Infinity; // Use -Infinity for max initial value
      let shareCosts: number[] = [];
 
-     portfolio.options.forEach(opt => {
+     const options = processedPortfolio?.openOptions || [];
+     const shares = processedPortfolio?.openShares || [];
+
+     options.forEach((opt: OptionPosition) => {
        minStrike = Math.min(minStrike, opt.strikePrice);
        maxStrike = Math.max(maxStrike, opt.strikePrice);
      });
-     portfolio.shares.forEach(share => {
+     shares.forEach((share: SharePosition) => {
         shareCosts.push(share.costBasisPerShare);
      });
 
      let low: number;
      let high: number;
-     const hasOptions = portfolio.options.length > 0;
-     const hasShares = portfolio.shares.length > 0;
+     const hasOptions = options.length > 0;
+     const hasShares = shares.length > 0;
 
      if (hasOptions) {
          const rangePadding = (maxStrike - minStrike) * 0.4 || 30; // 40% padding or $30
@@ -85,7 +89,7 @@ function App() {
 
      console.log('[App.tsx] Calculated Rounded Price Range:', finalRange);
      return finalRange;
-  }, [portfolio]);
+  }, [processedPortfolio]);
 
   // --- START: Add State for Manual Chart Range ---
   const [chartRangeStart, setChartRangeStart] = useState<number | ''>(() => priceRange.low);
@@ -101,8 +105,15 @@ function App() {
     if (currentPrice === '' || isNaN(Number(currentPrice))) {
       return 0;
     }
+    
+    // Create a valid Portfolio object from processedPortfolio
+    const portfolio: Portfolio = processedPortfolio ? {
+      shares: processedPortfolio.openShares,
+      options: processedPortfolio.openOptions
+    } : { shares: [], options: [] };
+    
     return calculatePortfolioPL(portfolio, Number(currentPrice), new Date(), ivDecimal, rateDecimal);
-  }, [portfolio, currentPrice, ivDecimal, rateDecimal]);
+  }, [processedPortfolio, currentPrice, ivDecimal, rateDecimal]);
 
   // Calculate crossover points whenever relevant inputs change
   const crossoverPoints = useMemo(() => {
@@ -111,12 +122,30 @@ function App() {
     const start = chartRangeStart === '' ? 0 : Number(chartRangeStart);
     const end = chartRangeEnd === '' ? start + 100 : Number(chartRangeEnd);
 
+    // Create a valid Portfolio object from processedPortfolio
+    const portfolio: Portfolio = processedPortfolio ? {
+      shares: processedPortfolio.openShares,
+      options: processedPortfolio.openOptions
+    } : { shares: [], options: [] };
+
     // Only calculate if benchmark is valid and price range exists
     if (qty > 0 && cost >= 0 && start < end) {
       return findCrossoverPoints(portfolio, qty, cost, start, end);
     }
     return []; // Return empty if benchmark not valid
-  }, [portfolio, benchmarkQuantity, benchmarkCostBasis, chartRangeStart, chartRangeEnd]);
+  }, [processedPortfolio, benchmarkQuantity, benchmarkCostBasis, chartRangeStart, chartRangeEnd]);
+
+  // Build a portfolio object from processedPortfolio for the chart
+  const currentOpenPortfolio: Portfolio = useMemo(() => {
+    if (!processedPortfolio) {
+      return { shares: [], options: [] }; // Empty portfolio as fallback
+    }
+    
+    return {
+      shares: processedPortfolio.openShares,
+      options: processedPortfolio.openOptions,
+    };
+  }, [processedPortfolio]);
 
   const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -351,7 +380,7 @@ function App() {
         )}
 
         <PLChart
-          portfolio={portfolio}
+          portfolio={currentOpenPortfolio}
           currentPrice={currentPrice}
           rangeStart={chartRangeStart === '' ? 0 : Number(chartRangeStart)}
           rangeEnd={chartRangeEnd === '' ? (chartRangeStart === '' ? 100 : Number(chartRangeStart) + 100) : Number(chartRangeEnd)}

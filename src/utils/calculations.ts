@@ -1,7 +1,8 @@
 // src/utils/calculations.ts
 
-import { BlackScholes } from 'black-scholes-js';
-import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
+import { Portfolio, SharePosition, OptionPosition, OptionType } from '../types/portfolio';
+// Import our custom Black-Scholes implementation
+import { blackScholes } from './black-scholes';
 
 // --- Constants and Defaults ---
 const DEFAULT_IMPLIED_VOLATILITY = 0.30; // 30% default IV
@@ -9,15 +10,15 @@ const DEFAULT_RISK_FREE_RATE = 0.04;   // 4% default risk-free rate
 const DAYS_IN_YEAR = 365.25;
 
 /**
- * Calculates the time to expiration in years (required by js-quantities BS).
+ * Calculates the time to expiration in years (required by the 'financial' library's BS function).
  * @param expirationDateStr - The expiration date string (YYYY-MM-DD).
  * @param currentDate - The current date (defaults to now).
  * @returns Time to expiration in years (fractional). Returns 0 if expired or invalid.
  */
 function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date = new Date()): number {
     try {
-        const expiryDate = new Date(expirationDateStr + 'T00:00:00Z');
-        const today = new Date(currentDate.toISOString().split('T')[0] + 'T00:00:00Z');
+        const expiryDate = new Date(expirationDateStr + 'T00:00:00Z'); // Treat as UTC midnight
+        const today = new Date(currentDate.toISOString().split('T')[0] + 'T00:00:00Z'); // Treat as UTC midnight
 
         if (isNaN(expiryDate.getTime())) {
             console.error("Invalid expiration date format:", expirationDateStr);
@@ -25,12 +26,12 @@ function getTimeToExpirationInYears(expirationDateStr: string, currentDate: Date
         }
         const timeDiff = expiryDate.getTime() - today.getTime();
         if (timeDiff <= 0) {
-            return 0;
+            return 0; // Expired or expiring today
         }
         const daysToExpiry = timeDiff / (1000 * 60 * 60 * 24);
         return daysToExpiry / DAYS_IN_YEAR;
     } catch (error) {
-        console.error("Error parsing date:", expirationDateStr, error);
+        console.error("Error parsing date in getTimeToExpirationInYears:", expirationDateStr, error);
         return 0;
     }
 }
@@ -47,7 +48,7 @@ export function calculateShareValue(share: SharePosition, underlyingPrice: numbe
 }
 
 /**
- * Calculates the theoretical value of a single option position using js-quantities Black-Scholes.
+ * Calculates the theoretical value of a single option position using the 'financial' library's Black-Scholes.
  * @param option - The option position object.
  * @param underlyingPrice - The current price of the underlying stock.
  * @param currentDate - The date for which to calculate the value (defaults to now).
@@ -62,7 +63,10 @@ export function calculateOptionTheoreticalValue(
     impliedVolatility: number = DEFAULT_IMPLIED_VOLATILITY,
     riskFreeRate: number = DEFAULT_RISK_FREE_RATE
 ): number {
-    if (isNaN(underlyingPrice) || underlyingPrice <= 0 || isNaN(impliedVolatility) || impliedVolatility < 0 || isNaN(riskFreeRate)) {
+    // Validate inputs
+    if (isNaN(underlyingPrice) || underlyingPrice <= 0 ||
+        isNaN(impliedVolatility) || impliedVolatility <= 0 || // BS requires positive volatility
+        isNaN(riskFreeRate)) {
         console.warn("Invalid input for option pricing:", { underlyingPrice, impliedVolatility, riskFreeRate });
         return 0;
     }
@@ -70,6 +74,7 @@ export function calculateOptionTheoreticalValue(
     const { strikePrice, expirationDate, optionType, positionType, quantity } = option;
     const timeToExpirationYears = getTimeToExpirationInYears(expirationDate, currentDate);
 
+    // Handle expired options: value is intrinsic value
     if (timeToExpirationYears <= 0) {
         let intrinsicValue = 0;
         if (optionType === 'call') {
@@ -82,26 +87,29 @@ export function calculateOptionTheoreticalValue(
     }
 
     try {
-        const bs = new BlackScholes(
-            underlyingPrice.toString(), // stock price as string
-            strikePrice,                // strike price
-            timeToExpirationYears,      // time to expiry in years
-            riskFreeRate,               // risk-free rate
-            impliedVolatility,          // volatility
-            optionType                  // 'call' or 'put'
+        // Use our custom Black-Scholes function
+        // blackScholes(underlyingPrice, strikePrice, interestRate, timeToExpiration, volatility, type)
+        const theoreticalValuePerShare = blackScholes(
+            underlyingPrice,
+            strikePrice,
+            riskFreeRate,
+            timeToExpirationYears,
+            impliedVolatility,
+            optionType // 'call' or 'put'
         );
-        const theoreticalValuePerShare = bs.calculate();
 
         if (isNaN(theoreticalValuePerShare) || typeof theoreticalValuePerShare !== 'number') {
-            console.warn("black-scholes-js returned invalid value:", { underlyingPrice, strikePrice, riskFreeRate, impliedVolatility, timeToExpirationYears, optionType }, "Result:", theoreticalValuePerShare);
-            return 0;
+             console.warn("Black-Scholes returned invalid value for option:", option,
+               { underlyingPrice, strikePrice, riskFreeRate, timeToExpirationYears, impliedVolatility, optionType },
+               "Result:", theoreticalValuePerShare);
+             return 0;
         }
 
-        const totalValue = theoreticalValuePerShare * quantity * 100;
+        const totalValue = theoreticalValuePerShare * quantity * 100; // x100 shares per contract
         return positionType === 'long' ? totalValue : -totalValue;
 
     } catch (error) {
-        console.error("Error in black-scholes-js calculation:", option, error);
+        console.error("Error in Black-Scholes calculation for option:", option, error);
         console.error("Inputs:", { optionType, underlyingPrice, strikePrice, timeToExpirationYears, riskFreeRate, impliedVolatility });
         return 0;
     }
@@ -115,32 +123,27 @@ export function calculateOptionTheoreticalValue(
  */
 export function calculateTotalCostBasis(portfolio: Portfolio): number {
   let totalCost = 0;
-
-  // Add cost of shares
   portfolio.shares.forEach(share => {
     if (share.isIncludedInAnalysis !== false) {
       totalCost += share.quantity * share.costBasisPerShare;
     }
   });
-
-  // Add/Subtract cost/premium of options
   portfolio.options.forEach(option => {
     if (option.isIncludedInAnalysis !== false) {
-      const premiumEffect = option.premium * option.quantity; // Premium is per contract
+      const premiumEffect = option.premium; // Premium is already total per contract
       if (option.positionType === 'long') {
-        totalCost += premiumEffect; // Paid premium increases cost basis
-      } else { // short
-        totalCost -= premiumEffect; // Received premium decreases cost basis
+        totalCost += premiumEffect * option.quantity;
+      } else {
+        totalCost -= premiumEffect * option.quantity;
       }
     }
   });
-
   return totalCost;
 }
 
 /**
  * Calculates the current *theoretical* total value of the entire portfolio.
- * Uses js-quantities library for options.
+ * Uses the 'financial' library for options.
  * @param portfolio - The portfolio object.
  * @param underlyingPrice - The current price of the underlying stock.
  * @param currentDate - The date for valuation (defaults to now).
@@ -156,22 +159,17 @@ export function calculatePortfolioTheoreticalValue(
     rate: number = DEFAULT_RISK_FREE_RATE
 ): number {
     if (isNaN(underlyingPrice) || underlyingPrice < 0) return 0;
-
     let totalValue = 0;
-
     portfolio.shares.forEach(share => {
       if (share.isIncludedInAnalysis !== false) {
         totalValue += calculateShareValue(share, underlyingPrice);
       }
     });
-
     portfolio.options.forEach(option => {
       if (option.isIncludedInAnalysis !== false) {
-        // Pass IV and Rate to the option calculation
         totalValue += calculateOptionTheoreticalValue(option, underlyingPrice, currentDate, iv, rate);
       }
     });
-
     return totalValue;
 }
 
@@ -193,33 +191,20 @@ export function calculatePortfolioPL(
     rate: number = DEFAULT_RISK_FREE_RATE
 ): number {
     if (isNaN(underlyingPrice) || underlyingPrice < 0) {
-         console.log(`CalcPL: Skipped due to invalid price ${underlyingPrice}`);
+         console.warn(`calculatePortfolioPL: Skipped due to invalid price ${underlyingPrice}`);
          return 0;
     }
-
-    // These are the two critical intermediate values:
     const currentTotalValue = calculatePortfolioTheoreticalValue(portfolio, underlyingPrice, currentDate, iv, rate);
     const totalCostBasis = calculateTotalCostBasis(portfolio);
     const finalPL = currentTotalValue - totalCostBasis;
 
-    // --- START: Add Detailed Logging for Debugging ---
-    // Log only for prices below 200 to reduce console spam
-    if (underlyingPrice < 200) {
-         console.log(`--- CalcPL @ Price: ${underlyingPrice.toFixed(2)} ---`);
-         console.log(`   Total Theoretical Value: ${currentTotalValue.toFixed(2)}`);
-         console.log(`   Total Cost Basis: ${totalCostBasis.toFixed(2)}`);
-         console.log(`   Resulting P/L: ${finalPL.toFixed(2)}`);
-         // Optional: Log portfolio state used (might be too verbose)
-         // console.log(`   Portfolio used:`, JSON.stringify(portfolio));
-    }
-    // --- END: Add Detailed Logging ---
-
-    return finalPL; // Return the calculated P/L
+    // console.log(`--- CalcPL @ Price: ${underlyingPrice.toFixed(2)} --- TV: ${currentTotalValue.toFixed(2)}, CB: ${totalCostBasis.toFixed(2)}, P/L: ${finalPL.toFixed(2)}`);
+    return finalPL;
 }
 
 /**
- * Generates an array of {price, pl} points for creating a P/L graph.
- * Uses the theoretical P/L calculation (js-quantities) for consistency.
+ * Generates an array of {price, pl} points for creating a THEORETICAL P/L graph.
+ * Uses the theoretical P/L calculation ('financial' library) for consistency.
  *
  * @param portfolio - The portfolio object.
  * @param rangeStart - The starting underlying price for the range.
@@ -234,7 +219,7 @@ export function generatePLData(
   portfolio: Portfolio,
   rangeStart: number,
   rangeEnd: number,
-  steps: number = 50,
+  steps: number = 100, // Increased default for smoother chart
   currentDate: Date = new Date(),
   iv: number = DEFAULT_IMPLIED_VOLATILITY,
   rate: number = DEFAULT_RISK_FREE_RATE
@@ -266,17 +251,14 @@ export function calculateOptionValueAtExpiration(
   underlyingPriceAtExpiration: number
 ): number {
   if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0 || option.isIncludedInAnalysis === false) return 0;
-
   const { strikePrice, optionType, positionType, quantity } = option;
   let intrinsicValuePerShare = 0;
-
   if (optionType === 'call') {
     intrinsicValuePerShare = Math.max(0, underlyingPriceAtExpiration - strikePrice);
-  } else { // put
+  } else {
     intrinsicValuePerShare = Math.max(0, strikePrice - underlyingPriceAtExpiration);
   }
-
-  const totalIntrinsicValue = intrinsicValuePerShare * quantity * 100; // x100 shares per contract
+  const totalIntrinsicValue = intrinsicValuePerShare * quantity * 100;
   return positionType === 'long' ? totalIntrinsicValue : -totalIntrinsicValue;
 }
 
@@ -291,25 +273,19 @@ export function calculatePortfolioPLAtExpiration(
   underlyingPriceAtExpiration: number
 ): number {
   if (isNaN(underlyingPriceAtExpiration) || underlyingPriceAtExpiration < 0) return 0;
-
-  let totalValue = 0;
-
-  // Add value of shares
+  let totalValueAtExpiration = 0;
   portfolio.shares.forEach(share => {
     if (share.isIncludedInAnalysis !== false) {
-      totalValue += calculateShareValue(share, underlyingPriceAtExpiration);
+      totalValueAtExpiration += calculateShareValue(share, underlyingPriceAtExpiration);
     }
   });
-
-  // Add value of options (intrinsic value only at expiration)
   portfolio.options.forEach(option => {
     if (option.isIncludedInAnalysis !== false) {
-      totalValue += calculateOptionValueAtExpiration(option, underlyingPriceAtExpiration);
+      totalValueAtExpiration += calculateOptionValueAtExpiration(option, underlyingPriceAtExpiration);
     }
   });
-
   const totalCostBasis = calculateTotalCostBasis(portfolio);
-  return totalValue - totalCostBasis;
+  return totalValueAtExpiration - totalCostBasis;
 }
 
 /**
@@ -325,15 +301,13 @@ export function generateExpirationPLData(
   portfolio: Portfolio,
   rangeStart: number,
   rangeEnd: number,
-  steps: number = 50
+  steps: number = 100 // Increased default for smoother chart
 ): { price: number, pl: number }[] {
   const data: { price: number, pl: number }[] = [];
   if (rangeStart >= rangeEnd || steps <= 0) return data;
-
   const stepSize = (rangeEnd - rangeStart) / steps;
   for (let i = 0; i <= steps; i++) {
     const price = rangeStart + (i * stepSize);
-    // Use the specific expiration P/L calculation
     const pl = calculatePortfolioPLAtExpiration(portfolio, price);
     if (isNaN(pl)) {
        console.warn(`generateExpirationPLData: NaN P/L calculated for price ${price}`);
@@ -358,8 +332,8 @@ export function calculateBenchmarkPL(
   costBasisPerShare: number,
   underlyingPrice: number
 ): number {
-  if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || isNaN(underlyingPrice)) {
-    return 0; // Return 0 if inputs are invalid or quantity is zero
+  if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || costBasisPerShare < 0 || isNaN(underlyingPrice)) {
+    return 0;
   }
   const currentValue = quantity * underlyingPrice;
   const initialCost = quantity * costBasisPerShare;
@@ -380,19 +354,16 @@ export function generateBenchmarkPLData(
   costBasisPerShare: number,
   rangeStart: number,
   rangeEnd: number,
-  steps: number = 50
+  steps: number = 100 // Increased default for smoother chart
 ): { price: number, pl: number }[] {
   const data: { price: number, pl: number }[] = [];
-  // Only generate data if quantity and cost basis are valid positive numbers
   if (isNaN(quantity) || quantity <= 0 || isNaN(costBasisPerShare) || costBasisPerShare < 0 || rangeStart >= rangeEnd || steps <= 0) {
-       return data; // Return empty array if benchmark isn't properly defined or range is invalid
+       return data;
   }
-
   const stepSize = (rangeEnd - rangeStart) / steps;
   for (let i = 0; i <= steps; i++) {
     const price = rangeStart + (i * stepSize);
     const pl = calculateBenchmarkPL(quantity, costBasisPerShare, price);
-    // Benchmark P/L should not be NaN if inputs are valid numbers
     data.push({ price: parseFloat(price.toFixed(2)), pl: parseFloat(pl.toFixed(2)) });
   }
   return data;
@@ -417,48 +388,39 @@ export function findCrossoverPoints(
     benchmarkCostBasis: number,
     rangeStart: number,
     rangeEnd: number,
-    steps: number = 100 // Use a reasonable number of steps, matching chart is good
+    steps: number = 100
 ): number[] {
     const crossovers: number[] = [];
-
-    // Ensure valid benchmark parameters and range
     if (benchmarkQuantity <= 0 || benchmarkCostBasis < 0 || rangeStart >= rangeEnd || steps <= 0) {
-        return crossovers; // Cannot calculate crossovers without a valid benchmark/range
+        return crossovers;
     }
-
-    // Generate the data points for both curves
-    // Use a higher number of steps for potentially better accuracy if desired
     const expirationData = generateExpirationPLData(portfolio, rangeStart, rangeEnd, steps);
     const benchmarkData = generateBenchmarkPLData(benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps);
 
-    // Ensure data was generated and arrays match length (they should if ranges/steps are same)
     if (expirationData.length === 0 || benchmarkData.length === 0 || expirationData.length !== benchmarkData.length) {
         console.warn("Crossover calc: Data generation failed or lengths mismatch.");
         return crossovers;
     }
 
-    // Iterate through the data points, looking for sign changes in the difference
     let prevDiff = expirationData[0].pl - benchmarkData[0].pl;
-
     for (let i = 1; i < expirationData.length; i++) {
         const currentDiff = expirationData[i].pl - benchmarkData[i].pl;
-
-        // Check if the difference crossed zero (sign change)
-        // (prevDiff < 0 && currentDiff >= 0) -> Crossed from below
-        // (prevDiff > 0 && currentDiff <= 0) -> Crossed from above
         if ((prevDiff < 0 && currentDiff >= 0) || (prevDiff > 0 && currentDiff <= 0)) {
-            // We found a crossover between point i-1 and i.
-            // For simplicity, we can take the price at point i as the approximate crossover.
-            // More advanced: Interpolate between price i-1 and i based on P/L values.
-            crossovers.push(expirationData[i].price);
+            // Basic interpolation for a slightly more accurate crossover point
+            if (currentDiff - prevDiff !== 0) { // Avoid division by zero
+                const price1 = expirationData[i-1].price;
+                const price2 = expirationData[i].price;
+                // t is the fraction of the way from point1 to point2 where crossover occurs
+                const t = Math.abs(prevDiff) / Math.abs(currentDiff - prevDiff);
+                crossovers.push(price1 + t * (price2 - price1));
+            } else {
+                 crossovers.push(expirationData[i].price); // Fallback if diff is zero
+            }
         }
-
-        // Don't update prevDiff if currentDiff is exactly 0 to catch subsequent crossings
         if (currentDiff !== 0) {
              prevDiff = currentDiff;
         }
     }
-
-    console.log("[Calculations] Found Crossover Points:", crossovers);
-    return crossovers;
+    // console.log("[Calculations] Found Crossover Points:", crossovers);
+    return crossovers.filter((val, idx, self) => self.indexOf(val) === idx); // Deduplicate
 } 
