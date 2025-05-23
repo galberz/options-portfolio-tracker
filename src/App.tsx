@@ -9,6 +9,8 @@ import { HelpModal } from './components/HelpModal';
 import './App.css';
 import './components/HelpModal.css';
 import { OptionPosition, SharePosition, Portfolio } from './types/portfolio';
+import PerformanceCards from './components/Dashboard/PerformanceCards';
+import RecentActivity from './components/Dashboard/RecentActivity';
 
 // --- Constants ---
 const DEFAULT_IV_PERCENT = 30;
@@ -38,7 +40,7 @@ function App() {
   const priceRange = useMemo(() => {
      let minStrike = Infinity;
      let maxStrike = -Infinity; // Use -Infinity for max initial value
-     let shareCosts: number[] = [];
+     const shareCosts: number[] = [];
 
      const options = processedPortfolio?.openOptions || [];
      const shares = processedPortfolio?.openShares || [];
@@ -207,6 +209,8 @@ function App() {
     <div className="app-container">
       <h1>Options Portfolio Tracker</h1>
       <p>Welcome! Let's track some options.</p>
+      <PerformanceCards />
+      <RecentActivity />
 
       <div className="current-status">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', marginBottom: '1rem' }}>

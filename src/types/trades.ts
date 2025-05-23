@@ -1,4 +1,4 @@
-import { OptionType, PositionType } from './portfolio';
+import { OptionType } from './portfolio';
 
 // --- Transaction Types Enum ---
 export enum TransactionType {

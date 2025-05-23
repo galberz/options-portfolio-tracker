@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
-import { TransactionType } from '../types/transactions';
+import { OptionType, PositionType } from '../types/portfolio';
+import { TransactionType } from '../types/trades';
 
 export const OptionForm: React.FC = () => {
   const {
     addTransaction,
-    portfolio,
     editingPositionId,
     editingPositionType,
-    updateOption,
     cancelEditing
   } = usePortfolio();
 
@@ -27,21 +25,9 @@ export const OptionForm: React.FC = () => {
   }, [editingPositionId, editingPositionType]);
 
   useEffect(() => {
-    if (isEditMode && editingPositionId) {
-      const optionToEdit = portfolio.options.find(o => o.id === editingPositionId);
-      if (optionToEdit) {
-        setTicker(optionToEdit.ticker);
-        setQuantity(optionToEdit.quantity);
-        setStrikePrice(optionToEdit.strikePrice);
-        setPremium(optionToEdit.premium);
-        setExpirationDate(optionToEdit.expirationDate);
-        setTradeDate(optionToEdit.tradeDate);
-        setOptionType(optionToEdit.optionType);
-        setPositionType(optionToEdit.positionType);
-      } else {
-        console.warn(`Option with ID ${editingPositionId} not found for editing.`);
-        cancelEditing();
-      }
+    if (isEditMode) {
+      // Editing functionality not implemented
+      cancelEditing();
     } else {
       setTicker('');
       setQuantity('');
@@ -52,7 +38,7 @@ export const OptionForm: React.FC = () => {
       setOptionType('call');
       setPositionType('short');
     }
-  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
+  }, [isEditMode, cancelEditing]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
