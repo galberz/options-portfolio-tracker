@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useState } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
-import { TransactionType } from '../types/transactions';
+import { OptionType, PositionType } from '../types/portfolio';
+import { TransactionType } from '../types/trades';
 
 export const OptionForm: React.FC = () => {
   const {
     addTransaction,
-    portfolio,
-    editingPositionId,
-    editingPositionType,
-    updateOption,
     cancelEditing
   } = usePortfolio();
 
@@ -22,37 +19,9 @@ export const OptionForm: React.FC = () => {
   const [optionType, setOptionType] = useState<OptionType>('call');
   const [positionType, setPositionType] = useState<PositionType>('short');
 
-  const isEditMode = useMemo(() => {
-    return editingPositionType === 'option' && editingPositionId !== null;
-  }, [editingPositionId, editingPositionType]);
+  const isEditMode = false;
 
-  useEffect(() => {
-    if (isEditMode && editingPositionId) {
-      const optionToEdit = portfolio.options.find(o => o.id === editingPositionId);
-      if (optionToEdit) {
-        setTicker(optionToEdit.ticker);
-        setQuantity(optionToEdit.quantity);
-        setStrikePrice(optionToEdit.strikePrice);
-        setPremium(optionToEdit.premium);
-        setExpirationDate(optionToEdit.expirationDate);
-        setTradeDate(optionToEdit.tradeDate);
-        setOptionType(optionToEdit.optionType);
-        setPositionType(optionToEdit.positionType);
-      } else {
-        console.warn(`Option with ID ${editingPositionId} not found for editing.`);
-        cancelEditing();
-      }
-    } else {
-      setTicker('');
-      setQuantity('');
-      setStrikePrice('');
-      setPremium('');
-      setExpirationDate('');
-      setTradeDate('');
-      setOptionType('call');
-      setPositionType('short');
-    }
-  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
+  // Editing functionality disabled
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -76,21 +45,15 @@ export const OptionForm: React.FC = () => {
       commission: 0,
     };
 
-    if (isEditMode && editingPositionId) {
-      console.log('[OptionForm] handleSubmit - Transaction Data (Edit Mode - Disabled):', transactionData);
-      console.warn("Attempted to save in edit mode, but editing is disabled for OptionForm.");
-    } else {
-      console.log('[OptionForm] handleSubmit - Calling addTransaction with:', transactionData);
-      addTransaction(transactionData);
-      setTicker('');
-      setQuantity('');
-      setStrikePrice('');
-      setPremium('');
-      setExpirationDate('');
-      setTradeDate('');
-      setOptionType('call');
-      setPositionType('short');
-    }
+    addTransaction(transactionData);
+    setTicker('');
+    setQuantity('');
+    setStrikePrice('');
+    setPremium('');
+    setExpirationDate('');
+    setTradeDate('');
+    setOptionType('call');
+    setPositionType('short');
   };
 
   const handleCancel = () => {

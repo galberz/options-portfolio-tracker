@@ -34,8 +34,8 @@ const OptionRow: React.FC<{
 // Main component to display both lists
 export const PositionList: React.FC = () => {
   const { processedPortfolio } = usePortfolio();
-  const openShares = processedPortfolio?.openShares || [];
-  const openOptions = processedPortfolio?.openOptions || [];
+  const openShares: SharePosition[] = processedPortfolio?.openShares || [];
+  const openOptions: OptionPosition[] = processedPortfolio?.openOptions || [];
   
   // --- Log the received options ---
   console.log('[PositionList] Received processedPortfolio.openOptions:', openOptions);
