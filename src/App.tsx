@@ -38,7 +38,7 @@ function App() {
   const priceRange = useMemo(() => {
      let minStrike = Infinity;
      let maxStrike = -Infinity; // Use -Infinity for max initial value
-     let shareCosts: number[] = [];
+     const shareCosts: number[] = [];
 
      const options = processedPortfolio?.openOptions || [];
      const shares = processedPortfolio?.openShares || [];

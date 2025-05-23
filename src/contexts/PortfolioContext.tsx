@@ -151,7 +151,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
            const strike = assignmentTx.strikePrice;
            const assignedTicker = assignmentTx.ticker.toUpperCase();
            let shareTxType: TransactionType.BUY_SHARE | TransactionType.SELL_SHARE | null = null;
-           let sharePrice = strike; // Transaction occurs at strike
+           const sharePrice = strike; // Transaction occurs at strike
 
            // Determine if assignment results in BUY or SELL of shares
            if (assignedOptionState.positionType === 'short') { // Assigned on a short option
