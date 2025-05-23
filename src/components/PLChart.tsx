@@ -41,76 +41,53 @@ export const PLChart: React.FC<PLChartProps> = ({
   // --- END: Destructure Benchmark Props ---
 }) => {
   // Optional: Keep logs for now if you want to see data generation
-  console.log('[PLChart.tsx] Rendering Recharts component...');
 
   // Generate the data points for the THEORETICAL chart (existing)
   const theoreticalChartData = useMemo(() => {
-    console.log(`[PLChart.tsx] Generating Theoretical Recharts data with range: ${rangeStart} to ${rangeEnd}, IV: ${impliedVolatility}, Rate: ${riskFreeRate}`);
     if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
         console.warn("[PLChart.tsx] Invalid range detected for theoretical data:", rangeStart, rangeEnd);
         return [];
     }
     const data = generatePLData(portfolio, rangeStart, rangeEnd, steps, new Date(), impliedVolatility, riskFreeRate);
-    console.log('[PLChart.tsx] Generated Theoretical Recharts data:', data);
     return data;
   }, [portfolio, rangeStart, rangeEnd, steps, impliedVolatility, riskFreeRate]);
 
   // --- START: ADD EXPIRATION DATA GENERATION ---
   // Generate the data points for the EXPIRATION chart
   const expirationChartData = useMemo(() => {
-    console.log(`[PLChart.tsx] Generating Expiration Recharts data with range: ${rangeStart} to ${rangeEnd}`);
      if (typeof rangeStart !== 'number' || typeof rangeEnd !== 'number' || rangeStart >= rangeEnd) {
         console.warn("[PLChart.tsx] Invalid range detected for expiration data:", rangeStart, rangeEnd);
         return [];
     }
     // Use the new function for expiration P/L
     const data = generateExpirationPLData(portfolio, rangeStart, rangeEnd, steps);
-    console.log('[PLChart.tsx] Generated Expiration Recharts data:', data);
     return data;
   }, [portfolio, rangeStart, rangeEnd, steps]);
   // --- END: ADD EXPIRATION DATA GENERATION ---
 
   // --- START: Generate Benchmark Data ---
   const benchmarkChartData = useMemo(() => {
-    console.log(`[PLChart.tsx] Generating Benchmark data with Qty: ${benchmarkQuantity}, Cost: ${benchmarkCostBasis}`);
     // Only generate if quantity is greater than 0
     if (benchmarkQuantity > 0 && benchmarkCostBasis >= 0) {
         const data = generateBenchmarkPLData(benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps);
-         console.log('[PLChart.tsx] Generated Benchmark data:', data.length);
         return data;
     }
-    console.log('[PLChart.tsx] Skipping Benchmark data generation (invalid inputs).');
     return []; // Return empty array if benchmark not defined
   }, [benchmarkQuantity, benchmarkCostBasis, rangeStart, rangeEnd, steps]);
   // --- END: Generate Benchmark Data ---
 
-  console.log('[PLChart.tsx] Theoretical Recharts data length:', theoreticalChartData.length);
-  console.log('[PLChart.tsx] Expiration Recharts data length:', expirationChartData.length); // Log new data length
 
   // Check if *either* dataset is empty, or maybe base it on theoretical for now
   const noData = theoreticalChartData.length === 0 && expirationChartData.length === 0 && benchmarkChartData.length === 0;
 
   if (noData) {
-    console.log('[PLChart.tsx] Rendering "Not enough data" message.');
     return <p style={{ textAlign: 'center', margin: '20px' }}>Not enough data to display P/L chart.</p>;
   }
 
   // Format currency for tooltip/axis
   const formatCurrency = (value: number) => `$${value.toFixed(0)}`; // Simple formatting
 
-  // --- (Keep the log for ReferenceLine conditions) ---
-  console.log('[PLChart.tsx] Checking ReferenceLine conditions:', {
-    currentPrice: currentPrice,
-    type: typeof currentPrice,
-    isNumber: typeof currentPrice === 'number',
-    isNotEmpty: currentPrice !== '',
-    isWithinRange: typeof currentPrice === 'number' && currentPrice >= rangeStart && currentPrice <= rangeEnd,
-    rangeStart: rangeStart,
-    rangeEnd: rangeEnd
-  });
-  // --- END LOG ---
 
-  console.log('[PLChart.tsx] Rendering the Recharts chart component.');
   return (
     <div style={{ width: '100%', height: 400 }}> {/* Define chart container size */}
       <ResponsiveContainer>

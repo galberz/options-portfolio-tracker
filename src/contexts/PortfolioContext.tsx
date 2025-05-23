@@ -12,9 +12,8 @@ import {
   ProcessedPortfolio, 
   TransactionType,
   OptionAssignmentExerciseTransaction 
-} from '../types/transactions'; // Import TransactionType and OptionAssignmentExerciseTransaction
+} from '../types/trades'; // Import TransactionType and OptionAssignmentExerciseTransaction
 import { 
-  Portfolio, 
   SharePosition, 
   OptionPosition,
   OptionType,
@@ -55,13 +54,6 @@ interface PortfolioProviderProps {
 // Initial empty state for the portfolio
 // --- START: Define initial states ---
 const initialTransactionLog: Transaction[] = [];
-const initialProcessedPortfolio: ProcessedPortfolio = {
-  openShares: [],
-  openOptions: [],
-  realizedPL: 0,
-  transactionLog: [],
-};
-// Key for local storage
 // Update local storage key to reflect the new structure
 const LOCAL_STORAGE_KEY = 'optionsPortfolio_transactionLog';
 // --- END: Define initial states ---
@@ -151,7 +143,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
            const strike = assignmentTx.strikePrice;
            const assignedTicker = assignmentTx.ticker.toUpperCase();
            let shareTxType: TransactionType.BUY_SHARE | TransactionType.SELL_SHARE | null = null;
-           let sharePrice = strike; // Transaction occurs at strike
+           const sharePrice = strike; // Transaction occurs at strike
 
            // Determine if assignment results in BUY or SELL of shares
            if (assignedOptionState.positionType === 'short') { // Assigned on a short option
@@ -563,7 +555,8 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
 
   // TODO: Adapt updateShare/updateOption to modify the corresponding *transaction* in the log.
   // This is complex as it requires finding the correct transaction (e.g., the initial BUY_SHARE).
-  const updateShare = useCallback((id: string, updatedShareData: Omit<SharePosition, 'id'>) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const updateShare = useCallback((_id: string, _updatedShareData: Omit<SharePosition, 'id'>) => {
     console.warn("updateShare needs reimplementation for transaction log");
     // Placeholder - find relevant BUY_SHARE transaction and update it?
     /* setPortfolio((prev) => ({
@@ -577,7 +570,8 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
     */
   }, []);
 
-  const updateOption = useCallback((id: string, updatedOptionData: Omit<OptionPosition, 'id'>) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const updateOption = useCallback((_id: string, _updatedOptionData: Omit<OptionPosition, 'id'>) => {
     console.warn("updateOption needs reimplementation for transaction log");
     /* setPortfolio((prev) => ({
       ...prev,

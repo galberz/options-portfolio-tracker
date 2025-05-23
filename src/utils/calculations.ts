@@ -1,6 +1,6 @@
 // src/utils/calculations.ts
 
-import { Portfolio, SharePosition, OptionPosition, OptionType } from '../types/portfolio';
+import { Portfolio, SharePosition, OptionPosition } from '../types/portfolio';
 // Import our custom Black-Scholes implementation
 import { blackScholes } from './black-scholes';
 

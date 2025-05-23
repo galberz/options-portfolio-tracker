@@ -38,7 +38,6 @@ export const PositionList: React.FC = () => {
   const openOptions = processedPortfolio?.openOptions || [];
   
   // --- Log the received options ---
-  console.log('[PositionList] Received processedPortfolio.openOptions:', openOptions);
   // --- End Log ---
 
   return (
@@ -55,7 +54,7 @@ export const PositionList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {openShares.map((share) => (
+            {openShares.map((share: SharePosition) => (
               <ShareRow
                 key={share.id}
                 share={share}
@@ -83,7 +82,7 @@ export const PositionList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {openOptions.map((option) => (
+            {openOptions.map((option: OptionPosition) => (
               <OptionRow
                 key={option.id}
                 option={option}
