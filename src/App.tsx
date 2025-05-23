@@ -3,6 +3,7 @@ import { PositionList } from './components/PositionList';
 import { OptionForm } from './components/OptionForm';
 import { ShareForm } from './components/ShareForm';
 import { PLChart } from './components/PLChart';
+import { TradeTable } from './components/TradeHistory/TradeTable';
 import { usePortfolio } from './contexts/PortfolioContext';
 import { calculatePortfolioPL, findCrossoverPoints } from './utils/calculations';
 import { HelpModal } from './components/HelpModal';
@@ -403,6 +404,9 @@ function App() {
 
       {/* Display the current positions */}
       <PositionList />
+
+      {/* Display trade history */}
+      <TradeTable />
 
       {/* --- START: Render Modal Conditionally --- */}
       <HelpModal
