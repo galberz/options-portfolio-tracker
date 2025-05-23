@@ -36,9 +36,9 @@ function App() {
 
   // Basic price range calculation (can be refined later)
   const priceRange = useMemo(() => {
-     let minStrike = Infinity;
-     let maxStrike = -Infinity; // Use -Infinity for max initial value
-     let shareCosts: number[] = [];
+    let minStrike = Infinity;
+    let maxStrike = -Infinity; // Use -Infinity for max initial value
+    const shareCosts: number[] = [];
 
      const options = processedPortfolio?.openOptions || [];
      const shares = processedPortfolio?.openShares || [];

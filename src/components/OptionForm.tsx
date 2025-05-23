@@ -1,17 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
-import { TransactionType } from '../types/transactions';
+import { OptionType, PositionType } from '../types/portfolio';
+import { TradeAction, Trade } from '../types/trades';
 
 export const OptionForm: React.FC = () => {
-  const {
-    addTransaction,
-    portfolio,
-    editingPositionId,
-    editingPositionType,
-    updateOption,
-    cancelEditing
-  } = usePortfolio();
+  const { addTrade } = usePortfolio();
 
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
@@ -22,38 +15,6 @@ export const OptionForm: React.FC = () => {
   const [optionType, setOptionType] = useState<OptionType>('call');
   const [positionType, setPositionType] = useState<PositionType>('short');
 
-  const isEditMode = useMemo(() => {
-    return editingPositionType === 'option' && editingPositionId !== null;
-  }, [editingPositionId, editingPositionType]);
-
-  useEffect(() => {
-    if (isEditMode && editingPositionId) {
-      const optionToEdit = portfolio.options.find(o => o.id === editingPositionId);
-      if (optionToEdit) {
-        setTicker(optionToEdit.ticker);
-        setQuantity(optionToEdit.quantity);
-        setStrikePrice(optionToEdit.strikePrice);
-        setPremium(optionToEdit.premium);
-        setExpirationDate(optionToEdit.expirationDate);
-        setTradeDate(optionToEdit.tradeDate);
-        setOptionType(optionToEdit.optionType);
-        setPositionType(optionToEdit.positionType);
-      } else {
-        console.warn(`Option with ID ${editingPositionId} not found for editing.`);
-        cancelEditing();
-      }
-    } else {
-      setTicker('');
-      setQuantity('');
-      setStrikePrice('');
-      setPremium('');
-      setExpirationDate('');
-      setTradeDate('');
-      setOptionType('call');
-      setPositionType('short');
-    }
-  }, [isEditMode, editingPositionId, portfolio, cancelEditing]);
-
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!ticker || quantity === '' || strikePrice === '' || premium === '' || !expirationDate || !tradeDate) {
@@ -63,43 +24,34 @@ export const OptionForm: React.FC = () => {
 
     const optionId = `${ticker}_${optionType}_${strikePrice}_${expirationDate}`;
 
-    const transactionData = {
+    const tradeData: Omit<Trade, 'id'> = {
       date: tradeDate,
       ticker: ticker.toUpperCase(),
-      transactionType: positionType === 'short' ? TransactionType.SELL_TO_OPEN_OPTION : TransactionType.BUY_TO_OPEN_OPTION,
+      action: positionType === 'short' ? TradeAction.SELL_TO_OPEN_OPTION : TradeAction.BUY_TO_OPEN_OPTION,
       quantity: Number(quantity),
       optionType,
+      positionType,
       strikePrice: Number(strikePrice),
       premiumPerContract: Number(premium),
       expirationDate,
       optionId,
-      commission: 0,
+      brokerage: 0,
     };
 
-    if (isEditMode && editingPositionId) {
-      console.log('[OptionForm] handleSubmit - Transaction Data (Edit Mode - Disabled):', transactionData);
-      console.warn("Attempted to save in edit mode, but editing is disabled for OptionForm.");
-    } else {
-      console.log('[OptionForm] handleSubmit - Calling addTransaction with:', transactionData);
-      addTransaction(transactionData);
-      setTicker('');
-      setQuantity('');
-      setStrikePrice('');
-      setPremium('');
-      setExpirationDate('');
-      setTradeDate('');
-      setOptionType('call');
-      setPositionType('short');
-    }
-  };
-
-  const handleCancel = () => {
-    cancelEditing();
+    addTrade(tradeData);
+    setTicker('');
+    setQuantity('');
+    setStrikePrice('');
+    setPremium('');
+    setExpirationDate('');
+    setTradeDate('');
+    setOptionType('call');
+    setPositionType('short');
   };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">
-      <h3>{isEditMode ? 'Edit Option Position' : 'Add Option Position'}</h3>
+      <h3>Add Option Position</h3>
       <div className="form-group">
         <label htmlFor="option-ticker">Ticker:</label>
         <input
@@ -162,22 +114,17 @@ export const OptionForm: React.FC = () => {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="option-premium">
-            TOTAL Premium / Contract ($): {/* Emphasize TOTAL */}
-        </label>
+        <label htmlFor="option-premium">TOTAL Premium / Contract ($):</label>
         <input
           id="option-premium"
           type="number"
           value={premium}
           onChange={(e) => setPremium(e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder={positionType === 'short' ? "e.g., 800.00 (Total Received)" : "e.g., 1345.00 (Total Paid)"}
+          placeholder={positionType === 'short' ? 'e.g., 800.00 (Total Received)' : 'e.g., 1345.00 (Total Paid)'}
           min="0"
           step="0.01"
           required
         />
-        <small>
-            Enter the TOTAL dollar amount paid (long) or received (short) for ONE single contract. Example: If the premium was quoted as $13.45 per share, you should enter <strong>1345</strong> here (i.e., $13.45 x 100).
-        </small>
       </div>
       <div className="form-group">
         <label htmlFor="option-trade-date">Trade Date:</label>
@@ -201,14 +148,9 @@ export const OptionForm: React.FC = () => {
       </div>
       <div className="form-actions" style={{ display: 'flex', gap: '10px' }}>
         <button type="submit" className="submit-button">
-          {isEditMode ? 'Save Changes' : 'Add Option'}
+          Add Option
         </button>
-        {isEditMode && (
-          <button type="button" onClick={handleCancel} className="cancel-button">
-            Cancel
-          </button>
-        )}
       </div>
     </form>
   );
-}; 
+};
