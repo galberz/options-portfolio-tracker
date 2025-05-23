@@ -277,11 +277,11 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
                    console.error(`[Calc] Error: Cannot add ${positionType} contracts to existing ${existingState.positionType} position for optionId ${optionId}. Tx:`, tx);
                    break; // Skip this transaction
                }
+               console.log(`[Calc] Adding to existing Option State ${optionId}. Before:`, { ...existingState });
                existingState.quantity += tx.quantity;
-               // For short, add received premium. For long, add paid premium (as negative).
                existingState.netPremiumValue += (positionType === 'short' ? premiumEffect : -premiumEffect);
                existingState.commissionPaid += commission;
-               console.log(`[Calc] Added to Option State ${optionId}: Qty: ${tx.quantity}, New Total Qty: ${existingState.quantity}, New Net Premium: ${existingState.netPremiumValue}`);
+               console.log(`[Calc] Added to Option State ${optionId}. After:`, { ...existingState });
              } else {
                // Opening a new option position
                openOptionStates[optionId] = {
@@ -519,7 +519,11 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
        };
     });
 
-    console.log(`[PortfolioContext] Calculation Complete. Open Shares: ${finalOpenShares.length}, Open Options: ${finalOpenOptions.length}, Realized P/L: ${cumulativeRealizedPL.toFixed(2)}`);
+    // --- Log final states before returning ---
+    console.log('[Calc] Final openOptionStates before mapping:', JSON.parse(JSON.stringify(openOptionStates))); // Deep copy for logging
+    console.log('[Calc] Final finalOpenOptions after mapping:', finalOpenOptions);
+    console.log(`[Calc] Calculation Complete. Open Shares: ${finalOpenShares.length}, Open Options: ${finalOpenOptions.length}, Realized P/L: ${cumulativeRealizedPL.toFixed(2)}`);
+    // --- End Log ---
 
     return {
       openShares: finalOpenShares,

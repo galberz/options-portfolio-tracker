@@ -64,8 +64,7 @@ export function calculateOptionTheoreticalValue(
     riskFreeRate: number = DEFAULT_RISK_FREE_RATE
 ): number {
     // Validate inputs
-    if (isNaN(underlyingPrice) || underlyingPrice <= 0 ||
-        isNaN(impliedVolatility) || impliedVolatility <= 0 || // BS requires positive volatility
+    if (isNaN(impliedVolatility) || impliedVolatility <= 0 ||
         isNaN(riskFreeRate)) {
         console.warn("Invalid input for option pricing:", { underlyingPrice, impliedVolatility, riskFreeRate });
         return 0;

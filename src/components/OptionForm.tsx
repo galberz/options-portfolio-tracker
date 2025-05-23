@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { OptionPosition, OptionType, PositionType } from '../types/portfolio';
+import { TransactionType } from '../types/transactions';
 
 export const OptionForm: React.FC = () => {
   const {
-    addOption,
+    addTransaction,
     portfolio,
     editingPositionId,
     editingPositionType,
@@ -60,21 +61,27 @@ export const OptionForm: React.FC = () => {
       return;
     }
 
-    const optionData: Omit<OptionPosition, 'id'> = {
+    const optionId = `${ticker}_${optionType}_${strikePrice}_${expirationDate}`;
+
+    const transactionData = {
+      date: tradeDate,
       ticker: ticker.toUpperCase(),
+      transactionType: positionType === 'short' ? TransactionType.SELL_TO_OPEN_OPTION : TransactionType.BUY_TO_OPEN_OPTION,
       quantity: Number(quantity),
+      optionType,
       strikePrice: Number(strikePrice),
-      premium: Number(premium),
-      expirationDate: expirationDate,
-      tradeDate: tradeDate,
-      optionType: optionType,
-      positionType: positionType,
+      premiumPerContract: Number(premium),
+      expirationDate,
+      optionId,
+      commission: 0,
     };
 
     if (isEditMode && editingPositionId) {
-      updateOption(editingPositionId, optionData);
+      console.log('[OptionForm] handleSubmit - Transaction Data (Edit Mode - Disabled):', transactionData);
+      console.warn("Attempted to save in edit mode, but editing is disabled for OptionForm.");
     } else {
-      addOption(optionData);
+      console.log('[OptionForm] handleSubmit - Calling addTransaction with:', transactionData);
+      addTransaction(transactionData);
       setTicker('');
       setQuantity('');
       setStrikePrice('');

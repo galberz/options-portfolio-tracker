@@ -36,6 +36,10 @@ export const PositionList: React.FC = () => {
   const { processedPortfolio } = usePortfolio();
   const openShares = processedPortfolio?.openShares || [];
   const openOptions = processedPortfolio?.openOptions || [];
+  
+  // --- Log the received options ---
+  console.log('[PositionList] Received processedPortfolio.openOptions:', openOptions);
+  // --- End Log ---
 
   return (
     <div className="position-list-container">
