@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useState, useEffect } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { TransactionType, ShareTransaction } from '../types/transactions';
+import { TransactionType, ShareTransaction } from '../types/trades';
 
 export const ShareForm: React.FC = () => {
   const { addTransaction } = usePortfolio();
@@ -9,10 +10,6 @@ export const ShareForm: React.FC = () => {
   const [quantity, setQuantity] = useState<number | ''>('');
   const [costBasisPerShare, setCostBasisPerShare] = useState<number | ''>('');
   const [purchaseDate, setPurchaseDate] = useState('');
-
-  const isEditMode = useMemo(() => {
-    return false;
-  }, []);
 
   useEffect(() => {
     // Effect previously handled populating form for editing, now disabled.
@@ -42,10 +39,6 @@ export const ShareForm: React.FC = () => {
     setPurchaseDate('');
   };
 
-  const handleCancel = () => {
-    // Remove cancelEditing call since it's no longer available
-    // This function can be removed entirely if not needed
-  };
 
   return (
     <form onSubmit={handleSubmit} className="position-form">

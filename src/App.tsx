@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PositionList } from './components/PositionList';
-import { OptionForm } from './components/OptionForm';
-import { ShareForm } from './components/ShareForm';
+import { TradeForm } from './components/TradeEntry/TradeForm';
 import { PLChart } from './components/PLChart';
 import { usePortfolio } from './contexts/PortfolioContext';
 import { calculatePortfolioPL, findCrossoverPoints } from './utils/calculations';
@@ -38,7 +37,7 @@ function App() {
   const priceRange = useMemo(() => {
      let minStrike = Infinity;
      let maxStrike = -Infinity; // Use -Infinity for max initial value
-     let shareCosts: number[] = [];
+     const shareCosts: number[] = [];
 
      const options = processedPortfolio?.openOptions || [];
      const shares = processedPortfolio?.openShares || [];
@@ -391,13 +390,10 @@ function App() {
         />
       </div>
 
-      {/* Add forms for entry */}
+      {/* Add form for trade entry */}
       <div className="forms-container" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
           <div style={{ flex: 1, minWidth: '300px' }}>
-             <ShareForm />
-          </div>
-          <div style={{ flex: 1, minWidth: '300px' }}>
-             <OptionForm />
+             <TradeForm />
           </div>
       </div>
 
