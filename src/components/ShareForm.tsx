@@ -1,23 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { TransactionType, ShareTransaction } from '../types/transactions';
+import { TradeAction, Trade } from '../types/trades';
 
 export const ShareForm: React.FC = () => {
-  const { addTransaction } = usePortfolio();
+  const { addTrade } = usePortfolio();
 
   const [ticker, setTicker] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [costBasisPerShare, setCostBasisPerShare] = useState<number | ''>('');
   const [purchaseDate, setPurchaseDate] = useState('');
-
-  const isEditMode = useMemo(() => {
-    return false;
-  }, []);
-
-  useEffect(() => {
-    // Effect previously handled populating form for editing, now disabled.
-    // Clear the effect or leave it empty.
-  }, []);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -26,25 +17,20 @@ export const ShareForm: React.FC = () => {
       return;
     }
 
-    const transactionData: Omit<ShareTransaction, 'id'> = {
+    const tradeData: Omit<Trade, 'id'> = {
       ticker: ticker.toUpperCase(),
-      transactionType: TransactionType.BUY_SHARE,
+      action: TradeAction.BUY_SHARE,
       date: purchaseDate,
       quantity: Number(quantity),
       pricePerShare: Number(costBasisPerShare),
-      commission: 0,
+      brokerage: 0,
     };
 
-    addTransaction(transactionData);
+    addTrade(tradeData);
     setTicker('');
     setQuantity('');
     setCostBasisPerShare('');
     setPurchaseDate('');
-  };
-
-  const handleCancel = () => {
-    // Remove cancelEditing call since it's no longer available
-    // This function can be removed entirely if not needed
   };
 
   return (
@@ -103,4 +89,4 @@ export const ShareForm: React.FC = () => {
       </div>
     </form>
   );
-}; 
+};
